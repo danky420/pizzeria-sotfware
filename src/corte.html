@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corte del día — Pizzería La Nonna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#17120F; --surface:#211A16; --surface-2:#2B221C; --line:#3A2E26;
+  --ink:#F0E9E0; --ink-dim:#A79A8D; --ink-faint:#77685C;
+  --money:#E8B15A; --good:#7FA968; --leak:#C4503E; --cool:#6E8FA6;
+  --paper:#E9E2D4; --paper-ink:#221C17; --paper-line:#C9BFAC;
+  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --disp:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#EBE7DD; --surface:#F8F5EE; --surface-2:#E2DCCE; --line:#CFC6B4;
+    --ink:#1E1813; --ink-dim:#5C5045; --ink-faint:#8A7C6E;
+    --money:#8A5510; --good:#43702F; --leak:#A33625; --cool:#3F6379;
+    --paper:#FFFCF4; --paper-ink:#1E1813; --paper-line:#DED4C0;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#EBE7DD; --surface:#F8F5EE; --surface-2:#E2DCCE; --line:#CFC6B4;
+  --ink:#1E1813; --ink-dim:#5C5045; --ink-faint:#8A7C6E;
+  --money:#8A5510; --good:#43702F; --leak:#A33625; --cool:#3F6379;
+  --paper:#FFFCF4; --paper-ink:#1E1813; --paper-line:#DED4C0;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:980px; margin:0 auto; padding:0 20px 72px}
+
+/* ---------- header ---------- */
+.top{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 16px;
+  padding:30px 0 22px; border-bottom:1px solid var(--line);
+}
+.shop{font-family:var(--disp); font-weight:800; font-size:1.32rem; letter-spacing:-.02em; margin:0}
+.when{color:var(--ink-dim); font-size:.9rem; margin:0}
+.when b{color:var(--ink); font-weight:600}
+.toggle{
+  margin-left:auto; background:none; border:1px solid var(--line); color:var(--ink-dim);
+  border-radius:999px; padding:5px 13px; font:inherit; font-size:.8rem; cursor:pointer;
+}
+.toggle:hover{color:var(--ink); border-color:var(--ink-faint)}
+
+/* ---------- hero ---------- */
+.hero{padding:34px 0 30px}
+.lede{
+  font-family:var(--disp); font-weight:600; font-size:clamp(1.45rem,4.4vw,2.1rem);
+  line-height:1.2; letter-spacing:-.022em; margin:0 0 26px; max-width:22ch;
+}
+.lede em{font-style:normal; color:var(--money)}
+
+.bar{
+  display:flex; width:100%; height:58px; border-radius:4px; overflow:hidden;
+  background:var(--surface-2); border:1px solid var(--line);
+}
+.seg{
+  height:100%; width:0; transition:width .9s cubic-bezier(.22,.8,.3,1);
+  position:relative; border-right:1px solid rgba(0,0,0,.28);
+}
+.seg:last-child{border-right:0}
+.seg[data-k="insumos"]{background:var(--cool)}
+.seg[data-k="comision"]{background:var(--leak)}
+.seg[data-k="iva"]{background:color-mix(in srgb,var(--leak) 55%, var(--surface-2))}
+.seg[data-k="entrega"]{background:color-mix(in srgb,var(--cool) 45%, var(--surface-2))}
+.seg[data-k="fijos"]{background:var(--ink-faint)}
+.seg[data-k="queda"]{background:var(--money)}
+
+.key{
+  display:flex; flex-wrap:wrap; gap:4px 20px; margin-top:14px;
+  font-size:.815rem; color:var(--ink-dim);
+}
+.key span{display:inline-flex; align-items:center; gap:7px; white-space:nowrap}
+.key i{width:10px; height:10px; border-radius:2px; flex:none}
+.key b{font-family:var(--mono); font-weight:500; color:var(--ink)}
+
+.nums{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:2px; margin-top:30px; background:var(--line); border:1px solid var(--line); border-radius:5px; overflow:hidden;
+}
+.num{background:var(--surface); padding:18px 20px 20px}
+.num h3{margin:0 0 6px; font-size:.83rem; font-weight:500; color:var(--ink-dim); letter-spacing:0}
+.num p{
+  margin:0; font-family:var(--disp); font-weight:800; letter-spacing:-.03em;
+  font-size:clamp(1.7rem,5.2vw,2.35rem); line-height:1; font-variant-numeric:tabular-nums;
+}
+.num small{display:block; margin-top:7px; font-size:.78rem; color:var(--ink-faint); font-weight:400; line-height:1.4}
+.num.pay p{color:var(--money)}
+
+/* ---------- sections ---------- */
+section.block{padding:40px 0 6px; border-top:1px solid var(--line); margin-top:38px}
+h2{
+  font-family:var(--disp); font-weight:600; font-size:1.18rem; letter-spacing:-.018em;
+  margin:0 0 6px;
+}
+.sub{color:var(--ink-dim); font-size:.92rem; margin:0 0 22px; max-width:62ch}
+
+/* ---------- channels ---------- */
+.ledger{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:5px; overflow:hidden}
+.row{
+  background:var(--surface); display:grid; align-items:center; gap:4px 14px; padding:13px 16px;
+  grid-template-columns:1.5fr repeat(4,minmax(62px,.85fr)) 60px;
+}
+.row.head{background:var(--surface-2); font-size:.76rem; color:var(--ink-dim); padding-top:9px; padding-bottom:9px}
+.row .ch{font-weight:600; display:flex; align-items:center; gap:9px; min-width:0}
+.row .ch i{width:7px; height:22px; border-radius:2px; flex:none}
+.row .ch span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.row .ch small{display:block; font-weight:400; color:var(--ink-faint); font-size:.74rem}
+.row var{font-style:normal; font-family:var(--mono); font-size:.88rem; font-variant-numeric:tabular-nums; text-align:right}
+.row .pct{font-family:var(--disp); font-weight:600; font-size:.95rem; text-align:right; font-variant-numeric:tabular-nums}
+.row.total{background:var(--surface-2); font-weight:600}
+.row.total var{font-weight:500}
+.hi{color:var(--money)}
+@media (max-width:720px){
+  .row{grid-template-columns:1fr auto auto; row-gap:3px}
+  .row.head{display:none}
+  .row .ch{grid-column:1/-1; margin-bottom:3px}
+  .row var::before, .row .pct::before{
+    content:attr(data-l); display:block; font-family:var(--sans); font-size:.68rem;
+    color:var(--ink-faint); font-weight:400; letter-spacing:0;
+  }
+  .row var, .row .pct{text-align:left}
+  .row var[data-l=""]{display:none}
+}
+
+/* ---------- tickets ---------- */
+.tickets{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px}
+.tk{
+  background:var(--paper); color:var(--paper-ink); border-radius:3px; padding:18px 17px 20px;
+  font-family:var(--mono); font-size:.79rem; line-height:1.75;
+  box-shadow:0 1px 0 var(--paper-line) inset;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),94% 100%,88% calc(100% - 7px),82% 100%,76% calc(100% - 7px),70% 100%,64% calc(100% - 7px),58% 100%,52% calc(100% - 7px),46% 100%,40% calc(100% - 7px),34% 100%,28% calc(100% - 7px),22% 100%,16% calc(100% - 7px),10% 100%,4% calc(100% - 7px),0 100%);
+}
+.tk h4{
+  font-family:var(--sans); font-size:.88rem; font-weight:600; margin:0 0 2px; letter-spacing:-.01em;
+}
+.tk .via{font-family:var(--sans); font-size:.74rem; color:#6C6053; margin:0 0 13px}
+.tk hr{border:0; border-top:1px dashed var(--paper-line); margin:10px 0}
+.tk .l{display:flex; justify-content:space-between; gap:10px}
+.tk .l.neg{color:#8C3323}
+.tk .l.out{font-family:var(--sans); font-weight:600; font-size:1rem; align-items:baseline}
+.tk .l.out b{font-family:var(--disp); font-weight:800; font-size:1.45rem; letter-spacing:-.03em}
+.tk .note{font-family:var(--sans); font-size:.72rem; color:#6C6053; margin:11px 0 0; line-height:1.45}
+
+/* ---------- controls ---------- */
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:20px 20px 8px}
+.ctrls{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:4px 28px}
+.ctrl{padding:10px 0 16px}
+.ctrl label{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:.87rem; color:var(--ink-dim)}
+.ctrl label b{font-family:var(--mono); font-weight:500; color:var(--ink); font-size:.95rem; font-variant-numeric:tabular-nums}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:26px; background:none; margin:2px 0 0; cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--line); border-radius:3px}
+input[type=range]::-moz-range-track{height:3px; background:var(--line); border-radius:3px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:19px; height:19px; border-radius:50%; background:var(--money);
+  margin-top:-8px; border:0; box-shadow:0 0 0 3px var(--surface);
+}
+input[type=range]::-moz-range-thumb{width:19px; height:19px; border-radius:50%; background:var(--money); border:0}
+input[type=range]:focus-visible{outline:2px solid var(--money); outline-offset:4px; border-radius:4px}
+.reset{
+  background:none; border:1px solid var(--line); color:var(--ink-dim); border-radius:999px;
+  padding:6px 15px; font:inherit; font-size:.82rem; cursor:pointer; margin:4px 0 16px;
+}
+.reset:hover{color:var(--ink); border-color:var(--ink-faint)}
+
+.verdict{
+  margin-top:20px; padding:18px 20px; border-radius:5px; background:var(--surface-2);
+  border-left:4px solid var(--money); font-size:.98rem; line-height:1.55;
+}
+.verdict b{color:var(--money); font-family:var(--disp); font-weight:800; letter-spacing:-.02em; font-size:1.06rem}
+
+/* ---------- leaks ---------- */
+.two{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:5px; padding:20px}
+.card h3{font-family:var(--disp); font-weight:600; font-size:1rem; margin:0 0 4px; letter-spacing:-.015em}
+.card .why{color:var(--ink-dim); font-size:.87rem; margin:0 0 16px}
+.mline{display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--line); font-size:.9rem}
+.mline:last-of-type{border-bottom:0}
+.mline var{font-style:normal; font-family:var(--mono); font-variant-numeric:tabular-nums}
+.mline.bad var{color:var(--leak); font-weight:500}
+.stamp{
+  margin-top:14px; font-family:var(--disp); font-weight:800; font-size:1.55rem;
+  letter-spacing:-.03em; color:var(--leak); line-height:1.1;
+}
+.stamp small{display:block; font-family:var(--sans); font-weight:400; font-size:.8rem; color:var(--ink-dim); letter-spacing:0; margin-top:4px}
+
+footer{
+  margin-top:52px; padding-top:22px; border-top:1px solid var(--line);
+  color:var(--ink-faint); font-size:.83rem; line-height:1.6;
+}
+footer b{color:var(--ink-dim); font-weight:600}
+
+@media (prefers-reduced-motion:reduce){
+  .seg{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1 class="shop">Pizzería La Nonna</h1>
+    <p class="when">Corte del <b>martes 8 de septiembre</b> · turno completo</p>
+    <button class="toggle" id="theme" type="button">Cambiar vista</button>
+  </header>
+
+  <section class="hero">
+    <p class="lede">Vendiste <span id="lede-venta">$20,600</span>. Te quedaron <em id="lede-queda">$2,343</em>.</p>
+
+    <div class="bar" id="bar" role="img" aria-label="Distribución de cada peso vendido hoy">
+      <div class="seg" data-k="insumos"></div>
+      <div class="seg" data-k="comision"></div>
+      <div class="seg" data-k="iva"></div>
+      <div class="seg" data-k="entrega"></div>
+      <div class="seg" data-k="fijos"></div>
+      <div class="seg" data-k="queda"></div>
+    </div>
+
+    <div class="key" id="key"></div>
+
+    <div class="nums">
+      <div class="num">
+        <h3>Venta del día</h3>
+        <p id="n-venta">$20,600</p>
+        <small id="n-pedidos">92 pedidos · ticket promedio $224</small>
+      </div>
+      <div class="num">
+        <h3>Se fue en comisiones e IVA</h3>
+        <p id="n-comision">$3,572</p>
+        <small id="n-comision-sub">de $11,000 vendidos por apps</small>
+      </div>
+      <div class="num pay">
+        <h3>Te quedó a ti</h3>
+        <p id="n-queda">$2,343</p>
+        <small>Después de insumos, empaque, reparto, comisiones, renta, nómina y servicios.</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>De dónde salió cada peso</h2>
+    <p class="sub">El mismo día, canal por canal. La columna que importa es la última: lo que sobra después de pagar ingredientes, caja, empaque y reparto — antes de renta y nómina.</p>
+    <div class="ledger" id="ledger"></div>
+  </section>
+
+  <section class="block">
+    <h2>La misma pizza, tres caminos</h2>
+    <p class="sub">Hawaiana grande. Misma masa, mismo queso, mismo horno. Cambia sólo por dónde entró el pedido.</p>
+    <div class="tickets" id="tickets"></div>
+  </section>
+
+  <section class="block">
+    <h2>Pon tus números</h2>
+    <p class="sub">Mueve las barras hasta que se parezca a tu negocio. Todo lo de arriba se recalcula solo.</p>
+    <div class="panel">
+      <div class="ctrls" id="ctrls"></div>
+      <button class="reset" id="reset" type="button">Volver al ejemplo</button>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </section>
+
+  <section class="block">
+    <h2>Dos fugas que no aparecen en el corte</h2>
+    <p class="sub">El corte de caja cuadra y aun así falta dinero. Casi siempre está en estos dos lugares.</p>
+    <div class="two">
+
+      <div class="card">
+        <h3>El queso que nadie cobró</h3>
+        <p class="why">La receta dice 180 g por pizza grande. La báscula del almacén dice otra cosa.</p>
+        <div class="mline"><span>Queso que debió salir</span><var id="q-teo">16.6 kg</var></div>
+        <div class="mline"><span>Queso que salió</span><var id="q-real">18.9 kg</var></div>
+        <div class="mline bad"><span>Diferencia</span><var id="q-dif">2.3 kg</var></div>
+        <div class="stamp" id="q-mes">$10,400 al mes
+          <small>Un puño de más por pizza, treinta días seguidos.</small>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Los tickets sin facturar</h3>
+        <p class="why">Siete clientes pidieron factura y se les dio. Los otros ochenta y cinco siguen esperando su comprobante global.</p>
+        <div class="mline"><span>Facturas individuales</span><var id="f-ind">7 · $2,310</var></div>
+        <div class="mline"><span>Tickets sin factura</span><var id="f-glob">85 · $18,290</var></div>
+        <div class="mline bad"><span>Factura global del día</span><var>Por emitir</var></div>
+        <div class="stamp" style="color:var(--ink-dim)">Pendiente
+          <small>Cada día sin emitir es un día que alguien tiene que reconstruir a mano después.</small>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Demostración.</b> Los números de arranque son un ejemplo armado con rangos públicos de comisión y costos del mercado mexicano — no son de ninguna pizzería real. Mueve las barras para verlo con los tuyos.</p>
+    <p>“Lo que te queda” es margen de contribución menos costos fijos del día. No sustituye a tu contador.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEF = {
+    pedidos:92, ticket:200, foodCost:32, comision:28,
+    sobreprecio:25, pctApp:48, pctMost:30, reparto:28, fijos:7200
+  };
+  var S = Object.assign({}, DEF);
+
+  var EMP_DEL = 14, EMP_MOST = 5, IVA = 0.16;
+  var APP_SPLIT = [["Rappi",.40],["DiDi Food",.38],["Uber Eats",.22]];
+
+  var mx = function(n){
+    return "$" + Math.round(n).toLocaleString("es-MX");
+  };
+  var pc = function(n){ return (n*100).toFixed(1).replace(/\.0$/,"") + "%"; };
+
+  function model(){
+    var total = S.pedidos;
+    var pApp = S.pctApp/100, pMost = S.pctMost/100;
+    if (pApp + pMost > 1) pMost = 1 - pApp;
+    var pWa = Math.max(0, 1 - pApp - pMost);
+
+    var nApp   = Math.round(total * pApp);
+    var nMost  = Math.round(total * pMost);
+    var nWa    = Math.max(0, total - nApp - nMost);
+
+    var precioApp = S.ticket * (1 + S.sobreprecio/100);
+    var insumo    = S.ticket * (S.foodCost/100);   // el costo del producto no cambia por canal
+
+    var rows = [];
+
+    rows.push(build("Mostrador","en el local y para llevar", nMost, S.ticket, 0, EMP_MOST, 0, "var(--good)"));
+    rows.push(build("WhatsApp directo","reparto propio", nWa, S.ticket, 0, EMP_DEL, S.reparto, "var(--money)"));
+
+    var used = 0;
+    APP_SPLIT.forEach(function(a,i){
+      var n = (i === APP_SPLIT.length-1) ? (nApp - used) : Math.round(nApp * a[1]);
+      used += n;
+      rows.push(build(a[0], "comisión " + S.comision + "% + IVA", Math.max(0,n), precioApp, S.comision/100, EMP_DEL, 0, "var(--leak)"));
+    });
+
+    function build(name, sub, n, precio, com, emp, rep, color){
+      var venta    = n * precio;
+      var comision = venta * com;
+      var iva      = comision * IVA;
+      var deposito = venta - comision - iva;
+      var costoIns = n * insumo;
+      var entrega  = n * (emp + rep);
+      return {
+        name:name, sub:sub, n:n, color:color, venta:venta,
+        comision:comision, iva:iva, deposito:deposito,
+        insumos:costoIns, entrega:entrega,
+        queda: deposito - costoIns - entrega
+      };
+    }
+
+    var t = {venta:0, comision:0, iva:0, deposito:0, insumos:0, entrega:0, queda:0, n:0};
+    rows.forEach(function(r){
+      for (var k in t) t[k] += r[k];
+    });
+
+    t.fijos  = S.fijos;
+    t.neto   = t.queda - t.fijos;
+    t.ventaApps = rows.slice(2).reduce(function(a,r){return a+r.venta;},0);
+    t.quedaApps = rows.slice(2).reduce(function(a,r){return a+r.queda;},0);
+    t.nApps     = nApp;
+
+    // contrafactual: los mismos pedidos de app, entregados por cuenta propia al precio de mostrador
+    var vd = nApp * S.ticket;
+    t.directoEquiv = vd - (nApp * insumo) - (nApp * (EMP_DEL + S.reparto));
+
+    return {rows:rows, t:t, insumo:insumo, precioApp:precioApp};
+  }
+
+  /* ---------- render ---------- */
+
+  var SEGS = [
+    ["insumos","Ingredientes","var(--cool)"],
+    ["comision","Comisión de apps","var(--leak)"],
+    ["iva","IVA sobre la comisión","color-mix(in srgb,var(--leak) 55%, var(--surface-2))"],
+    ["entrega","Empaque y reparto","color-mix(in srgb,var(--cool) 45%, var(--surface-2))"],
+    ["fijos","Renta, nómina y servicios","var(--ink-faint)"],
+    ["queda","Te queda","var(--money)"]
+  ];
+
+  function draw(){
+    var m = model(), t = m.t;
+
+    document.getElementById("lede-venta").textContent = mx(t.venta);
+    document.getElementById("lede-queda").textContent = mx(t.neto);
+    document.getElementById("n-venta").textContent = mx(t.venta);
+    document.getElementById("n-pedidos").textContent =
+      t.n + " pedidos · ticket promedio " + mx(t.n ? t.venta/t.n : 0);
+    document.getElementById("n-comision").textContent = mx(t.comision + t.iva);
+    document.getElementById("n-comision-sub").textContent = "de " + mx(t.ventaApps) + " vendidos por apps";
+    document.getElementById("n-queda").textContent = mx(t.neto);
+
+    // barra
+    var vals = {
+      insumos:t.insumos, comision:t.comision, iva:t.iva,
+      entrega:t.entrega, fijos:t.fijos, queda:Math.max(0,t.neto)
+    };
+    var sum = 0; for (var k in vals) sum += vals[k];
+    sum = sum || 1;
+
+    var segs = document.querySelectorAll("#bar .seg");
+    var key = "";
+    SEGS.forEach(function(s,i){
+      var w = vals[s[0]] / sum * 100;
+      segs[i].style.width = w.toFixed(2) + "%";
+      segs[i].title = s[1] + ": " + mx(vals[s[0]]);
+      key += '<span><i style="background:'+s[2]+'"></i>'+s[1]+' <b>'+mx(vals[s[0]])+'</b></span>';
+    });
+    document.getElementById("key").innerHTML = key;
+
+    // libro mayor
+    var L = '<div class="row head"><div class="ch">Canal</div>' +
+      '<var>Pedidos</var><var>Venta</var><var>Te depositan</var><var>Te queda</var><div class="pct">Margen</div></div>';
+    m.rows.forEach(function(r){
+      L += '<div class="row">' +
+        '<div class="ch"><i style="background:'+r.color+'"></i><span>'+r.name+'<small>'+r.sub+'</small></span></div>' +
+        '<var data-l="Pedidos">'+r.n+'</var>' +
+        '<var data-l="Venta">'+mx(r.venta)+'</var>' +
+        '<var data-l="Te depositan">'+mx(r.deposito)+'</var>' +
+        '<var data-l="Te queda" class="hi">'+mx(r.queda)+'</var>' +
+        '<div class="pct" data-l="Margen">'+(r.venta ? pc(r.queda/r.venta) : "—")+'</div>' +
+      '</div>';
+    });
+    L += '<div class="row total">' +
+      '<div class="ch"><i style="background:transparent"></i><span>Todo el día</span></div>' +
+      '<var data-l="Pedidos">'+t.n+'</var><var data-l="Venta">'+mx(t.venta)+'</var>' +
+      '<var data-l="Te depositan">'+mx(t.deposito)+'</var><var data-l="Te queda" class="hi">'+mx(t.queda)+'</var>' +
+      '<div class="pct" data-l="Margen">'+(t.venta ? pc(t.queda/t.venta) : "—")+'</div></div>';
+    document.getElementById("ledger").innerHTML = L;
+
+    // tickets
+    var ins = m.insumo, rep = S.reparto;
+    var comU = m.precioApp * (S.comision/100), ivaU = comU * IVA;
+    var tk = [
+      {h:"Mostrador", v:"El cliente vino por ella", precio:S.ticket, lines:[
+        ["Ingredientes", -ins], ["Caja", -EMP_MOST]
+      ], out:S.ticket - ins - EMP_MOST,
+       note:"El peso más barato de ganar es el que entra caminando."},
+      {h:"WhatsApp directo", v:"Tu repartidor la llevó", precio:S.ticket, lines:[
+        ["Ingredientes", -ins], ["Caja y bolsa", -EMP_DEL], ["Repartidor", -rep]
+      ], out:S.ticket - ins - EMP_DEL - rep,
+       note:"Directo no es gratis: el reparto propio lo pagas tú."},
+      {h:"Rappi", v:"Precio inflado " + S.sobreprecio + "% en la app", precio:m.precioApp, lines:[
+        ["Comisión " + S.comision + "%", -comU], ["IVA sobre comisión", -ivaU],
+        ["Ingredientes", -ins], ["Caja y bolsa", -EMP_DEL]
+      ], out:m.precioApp - comU - ivaU - ins - EMP_DEL,
+       note:"El sobreprecio en la app es lo único que lo sostiene."}
+    ];
+    var H = "";
+    tk.forEach(function(x){
+      H += '<div class="tk"><h4>'+x.h+'</h4><p class="via">'+x.v+'</p>' +
+           '<div class="l"><span>Hawaiana grande</span><span>'+mx(x.precio)+'</span></div><hr>';
+      x.lines.forEach(function(l){
+        H += '<div class="l neg"><span>'+l[0]+'</span><span>'+mx(l[1])+'</span></div>';
+      });
+      H += '<hr><div class="l out"><span>Te queda</span><b>'+mx(x.out)+'</b></div>' +
+           '<p class="note">'+x.note+'</p></div>';
+    });
+    document.getElementById("tickets").innerHTML = H;
+
+    // veredicto
+    var dif = t.quedaApps - t.directoEquiv;
+    var mes = Math.abs(dif) * 26;
+    var v;
+    if (t.nApps === 0){
+      v = "Sin pedidos por app, todo tu margen depende de que la gente te encuentre sola. " +
+          "Hoy te quedan <b>" + mx(t.neto) + "</b> del día.";
+    } else if (dif > 250){
+      v = "Con " + S.sobreprecio + "% de sobreprecio, las apps te dejan <b>" + mx(dif) + "</b> más al día " +
+          "que si entregaras esos mismos " + t.nApps + " pedidos por tu cuenta. " +
+          "Al mes son " + mx(mes) + ". El precio digital está haciendo su trabajo.";
+    } else if (dif < -250){
+      v = "Esos " + t.nApps + " pedidos por app te están costando <b>" + mx(-dif) + "</b> al día " +
+          "comparados con entregarlos tú mismo. Al mes: " + mx(mes) + ". " +
+          "Sube el sobreprecio o mueve clientes a pedido directo.";
+    } else {
+      v = "Vas a mano: apps y reparto propio te dejan casi lo mismo (" + mx(Math.abs(dif)) + " de diferencia al día). " +
+          "Aquí el negocio no está en elegir app o directo — está en llenar el mostrador.";
+    }
+    document.getElementById("verdict").innerHTML = v;
+
+    // queso
+    var gTeo = t.n * 180 / 1000;
+    var gReal = gTeo * 1.14;
+    var dq = gReal - gTeo;
+    document.getElementById("q-teo").textContent = gTeo.toFixed(1) + " kg";
+    document.getElementById("q-real").textContent = gReal.toFixed(1) + " kg";
+    document.getElementById("q-dif").textContent = dq.toFixed(1) + " kg";
+    document.getElementById("q-mes").firstChild.nodeValue = mx(dq * 148 * 26) + " al mes";
+
+    // facturas
+    var fInd = Math.max(1, Math.round(t.n * 0.076));
+    var fGlob = t.n - fInd;
+    var tk2 = t.n ? t.venta / t.n : 0;
+    document.getElementById("f-ind").textContent = fInd + " · " + mx(fInd * tk2);
+    document.getElementById("f-glob").textContent = fGlob + " · " + mx(fGlob * tk2);
+  }
+
+  /* ---------- controles ---------- */
+
+  var CTRL = [
+    ["pedidos","Pedidos del día",40,200,1,function(v){return v;}],
+    ["ticket","Precio promedio en el local",100,400,5,function(v){return mx(v);}],
+    ["foodCost","Ingredientes sobre venta",20,50,1,function(v){return v+"%";}],
+    ["pctMost","Pedidos en mostrador",0,100,1,function(v){return v+"%";}],
+    ["pctApp","Pedidos por apps",0,100,1,function(v){return v+"%";}],
+    ["comision","Comisión que te cobran",10,40,1,function(v){return v+"%";}],
+    ["sobreprecio","Sobreprecio en la app",0,50,1,function(v){return v+"%";}],
+    ["reparto","Costo de tu repartidor",0,60,1,function(v){return mx(v)+" por pedido";}],
+    ["fijos","Renta, nómina y servicios",0,20000,200,function(v){return mx(v)+" al día";}]
+  ];
+
+  var host = document.getElementById("ctrls");
+  CTRL.forEach(function(c){
+    var id = "c-" + c[0];
+    var d = document.createElement("div");
+    d.className = "ctrl";
+    d.innerHTML = '<label for="'+id+'">'+c[1]+' <b id="v-'+c[0]+'"></b></label>' +
+      '<input type="range" id="'+id+'" min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+S[c[0]]+'">';
+    host.appendChild(d);
+    var inp = d.querySelector("input");
+    inp.addEventListener("input", function(){
+      S[c[0]] = Number(inp.value);
+      if (c[0] === "pctApp" && S.pctApp + S.pctMost > 100){
+        S.pctMost = 100 - S.pctApp;
+        document.getElementById("c-pctMost").value = S.pctMost;
+      }
+      if (c[0] === "pctMost" && S.pctApp + S.pctMost > 100){
+        S.pctApp = 100 - S.pctMost;
+        document.getElementById("c-pctApp").value = S.pctApp;
+      }
+      labels(); draw();
+    });
+  });
+
+  function labels(){
+    CTRL.forEach(function(c){
+      document.getElementById("v-"+c[0]).textContent = c[5](S[c[0]]);
+    });
+  }
+
+  document.getElementById("reset").addEventListener("click", function(){
+    S = Object.assign({}, DEF);
+    CTRL.forEach(function(c){ document.getElementById("c-"+c[0]).value = S[c[0]]; });
+    labels(); draw();
+  });
+
+  document.getElementById("theme").addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var dark = cur ? cur === "dark"
+      : !window.matchMedia("(prefers-color-scheme: light)").matches;
+    document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+    draw();
+  });
+
+  labels();
+  requestAnimationFrame(function(){ requestAnimationFrame(draw); });
+})();
+</script>
+</body>
+</html>

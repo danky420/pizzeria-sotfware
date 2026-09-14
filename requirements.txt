@@ -1,0 +1,6 @@
+# Build pipeline (build.py)
+Pillow>=10.0
+
+# Mobile layout checks (scripts/check_mobile.py)
+# After installing, also run once:  playwright install chromium
+playwright>=1.40
