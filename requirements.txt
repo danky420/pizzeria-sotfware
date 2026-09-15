@@ -1,6 +1,15 @@
-# Build pipeline (build.py)
+# Python is no longer part of this project's build or test path.
+#
+# The app is Node/TypeScript end to end (see CLAUDE.md): npm workspaces for
+# backend/, customer/, admin/, employee/ and packages/portal-shared/.
+#
+# These two dependencies exist only for the retired scripts in
+# scripts/archive/, which are kept for reference and are not expected to run.
+# Nothing in normal development needs them installed.
+
+# scripts/archive/build.py — built the retired single-file static site
 Pillow>=10.0
 
-# Mobile layout checks (scripts/check_mobile.py)
+# scripts/archive/check_mobile.py — Playwright smoke test for that same site.
 # After installing, also run once:  playwright install chromium
 playwright>=1.40

@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
 """
+RETIRED — reference only, do not run.
+
+This was the Playwright smoke test for the single-file static site, which
+`customer/` (React + Vite) now replaces. It drove `dist/index.html`, an
+artifact `build.py` no longer produces, and its order-flow assertion checks
+for a `wa.me` link — a flow that no longer exists (orders go to the backend,
+WhatsApp is only a general contact link now).
+
+Kept for the checks it encodes, which are still the right ones for a phone-
+width page: console errors, horizontal overflow, elements escaping the
+viewport even inside `overflow:hidden` containers, and header height. If
+`customer/` gets an equivalent smoke test, that is new work that can crib
+from here — not an edit of this file.
+
+--- original docstring below ---
+
 Revision de maquetado movil para dist/index.html.
 
 No es una suite de pruebas. Es el arnes que encontro los bugs reales de la

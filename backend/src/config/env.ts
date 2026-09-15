@@ -54,7 +54,12 @@ function load() {
     isTest: value.NODE_ENV === "test",
     backendRoot,
     repoRoot,
-    adminDistDir: resolve(repoRoot, "admin", "dist")
+    // One service serves the API and all three built SPAs at distinct path
+    // prefixes (see docs/backend-admin-plan.md, "Stack decisions"), so the
+    // admin/employee session cookie stays same-origin with /api/*.
+    customerDistDir: resolve(repoRoot, "customer", "dist"),
+    adminDistDir: resolve(repoRoot, "admin", "dist"),
+    employeeDistDir: resolve(repoRoot, "employee", "dist")
   };
 }
 

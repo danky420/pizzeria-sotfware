@@ -77,16 +77,52 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(adminCustomerRoutes, { prefix: ADMIN_PREFIX });
   await app.register(adminAnalyticsRoutes, { prefix: ADMIN_PREFIX });
 
-  // The admin SPA is a later phase: until admin/dist exists this service is an
-  // API and nothing else, which must not be a startup failure.
-  const hasAdminBuild = existsSync(join(env.adminDistDir, "index.html"));
-  if (hasAdminBuild) {
-    await app.register(fastifyStatic, { root: env.adminDistDir, prefix: "/", wildcard: false });
+  // One service, three SPAs, distinct prefixes (docs/backend-admin-plan.md,
+  // "Stack decisions"): / → customer, /admin → back office, /staff → employee.
+  // Each is optional at boot — a frontend that has not been built yet must
+  // leave the API running rather than crash the service.
+  const spas = [
+    { prefix: "/staff", root: env.employeeDistDir },
+    { prefix: "/admin", root: env.adminDistDir },
+    // The customer site is mounted last so its files resolve only after the
+    // two prefixed apps have had their say, and it owns "/" itself.
+    { prefix: "/", root: env.customerDistDir }
+  ].filter((spa) => existsSync(join(spa.root, "index.html")));
+
+  for (const [index, spa] of spas.entries()) {
+    await app.register(fastifyStatic, {
+      root: spa.root,
+      prefix: spa.prefix,
+      // wildcard:false registers a route per real file, so anything that is
+      // *not* a built asset falls through to the not-found handler below and
+      // becomes the SPA fallback instead of a 404. The trade-off: that route
+      // table is built at boot, so rebuilding a frontend means restarting
+      // this service or its hashed asset names 404.
+      wildcard: false,
+      // Only the first registration may add reply.sendFile; the rest reuse it
+      // and pass their own root explicitly.
+      decorateReply: index === 0
+    });
+  }
+
+  // Longest prefix first, so "/admin/orders" matches /admin, not /.
+  const spasByPrefix = [...spas].sort((a, b) => b.prefix.length - a.prefix.length);
+
+  function spaFor(url: string) {
+    const path = url.split("?")[0] ?? "";
+    return spasByPrefix.find(
+      (spa) => spa.prefix === "/" || path === spa.prefix || path.startsWith(`${spa.prefix}/`)
+    );
   }
 
   app.setNotFoundHandler((request, reply) => {
-    if (hasAdminBuild && request.method === "GET" && !request.url.startsWith("/api/")) {
-      return reply.sendFile("index.html");
+    if (request.method === "GET" && !request.url.startsWith("/api/")) {
+      const spa = spaFor(request.url);
+      // A missing hashed asset is a genuine 404, not a client-side route —
+      // serving index.html there would hand the browser HTML labelled as JS.
+      if (spa && !/\.[a-z0-9]+$/i.test(request.url.split("?")[0] ?? "")) {
+        return reply.sendFile("index.html", spa.root);
+      }
     }
     return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Not found" } });
   });

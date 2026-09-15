@@ -1,5 +1,23 @@
 #!/usr/bin/env python3
 """
+RETIRED — reference only, do not run.
+
+This built the single-file static site that `customer/` (React + Vite) now
+replaces. Its input, `src/index.html`, is archived at
+`src/archive/chesare-v2-vanilla-js.html`, so this script no longer has a
+template to build and will exit with "falta la plantilla" if invoked.
+
+It is kept for the asset pipeline it documents: the pixel crops
+(`RECORTE_MARCA`, `RECORTE_ICONO`) that derive the brand logo, the
+home-screen icon and the web manifest from `assets/source/menu-00-portada.jpg`.
+If those brand assets are ever needed again, this is where the recipe lives.
+
+The one job that outlived the static site — copying `src/corte.html` to
+`dist/` — was dropped: `src/corte.html` is a standalone, asset-free,
+token-free page that is opened directly from `src/`.
+
+--- original docstring below ---
+
 Build del sitio de Pizza's Chesa're.
 
 Toma la plantilla src/index.html, genera los assets de marca a partir de la

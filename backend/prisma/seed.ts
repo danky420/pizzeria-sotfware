@@ -8,7 +8,7 @@ import { hashPassword } from "../src/auth/hash.js";
 /**
  * Seeds the one real shop: Pizza's Chesa're in Maltrata, Veracruz.
  *
- * The menu below is a hand-translated copy of the arrays in src/index.html
+ * The menu below is a hand-translated copy of the arrays in src/archive/chesare-v2-vanilla-js.html
  * (TALLAS, ESTILOS, PIZZAS, ESPECIALES, BURGERS, ALITAS_65/80, PASTAS, POSTRES,
  * FRAPPES, CAFES, REFRESCOS, CERVEZAS, HORAS), which are themselves transcribed
  * from photographs of the shop's handwritten printed menu. Two rules carried over
@@ -40,7 +40,7 @@ const LOCATION = {
   currency: "MXN"
 };
 
-/* ============ menu data, translated from src/index.html ============ */
+/* ============ menu data, translated from src/archive/chesare-v2-vanilla-js.html ============ */
 
 interface FlatSource {
   id: string;
@@ -114,7 +114,7 @@ const ALITAS_80 = [
 ];
 
 const PASTAS = ["Fettuccini Alfredo", "Fusilli boloñesa", "Linguini al aceite y ajo", "Penne a la vodka"];
-const PASTA_PRICE = 170; // src/index.html abrirLista("Pasta", ... , 170, ...)
+const PASTA_PRICE = 170; // src/archive/chesare-v2-vanilla-js.html abrirLista("Pasta", ... , 170, ...)
 const ALITAS_65_PRICE = 65;
 const ALITAS_80_PRICE = 80;
 
@@ -166,7 +166,7 @@ const CERVEZAS: FlatSource[] = [
   { id: "ce-mic", n: "Michelada", p: null }
 ];
 
-// Index 0 is Sunday, matching both HORAS in src/index.html and
+// Index 0 is Sunday, matching both HORAS in src/archive/chesare-v2-vanilla-js.html and
 // BusinessHours.dayOfWeek. Decimal hours; Thursday is closed.
 const HORAS: { d: string; a: number | null; c: number | null }[] = [
   { d: "Domingo", a: 17.5, c: 24 },
@@ -178,7 +178,7 @@ const HORAS: { d: string; a: number | null; c: number | null }[] = [
   { d: "Sábado", a: 17.5, c: 24 }
 ];
 
-// Section list and slugs from SECS in src/index.html.
+// Section list and slugs from SECS in src/archive/chesare-v2-vanilla-js.html.
 const CATEGORIES = [
   { slug: "pizzas", name: "Pizzas", description: "Seis tamaños · orilla rellena o extra queso" },
   { slug: "hamburguesas", name: "Hamburguesas", description: null },

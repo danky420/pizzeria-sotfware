@@ -32,7 +32,8 @@ if (!container) throw new Error("No se encontró el elemento #root");
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* /admin/ in production, / in dev — see this app's vite.config.ts base. */}
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>
