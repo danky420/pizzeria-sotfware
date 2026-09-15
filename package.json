@@ -1,0 +1,30 @@
+{
+  "name": "pizzeria-sotfware",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pizza's Chesa're — customer ordering site, backend API and admin portal",
+  "workspaces": [
+    "backend",
+    "admin",
+    "customer"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace backend",
+    "dev:admin": "npm run dev --workspace admin",
+    "dev:customer": "npm run dev --workspace customer",
+    "build": "npm run build --workspaces --if-present",
+    "build:api": "npm run build --workspace backend",
+    "build:admin": "npm run build --workspace admin",
+    "build:customer": "npm run build --workspace customer",
+    "start": "npm run start --workspace backend",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "prisma": "npm run prisma --workspace backend --",
+    "migrate": "npm run migrate --workspace backend",
+    "migrate:deploy": "npm run migrate:deploy --workspace backend",
+    "seed": "npm run seed --workspace backend"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,682 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, type FormEvent } from "react";
+import { Link, useParams } from "react-router-dom";
+import { menuApi, type PriceMatrixCellInput } from "../../api/menu";
+import type { ItemType, MenuItem, OptionGroup, SizeOption, StyleOption } from "../../api/types";
+import {
+  Badge,
+  EmptyState,
+  ErrorNotice,
+  Field,
+  Loading,
+  PageHeader,
+  Panel,
+  SuccessNotice,
+  Toggle
+} from "../../components/ui";
+import { formatMoney, slugify } from "../../lib/format";
+import { useActiveLocation } from "../../state/location";
+
+/**
+ * "" means the price is genuinely unknown (`p: null` on the static site — the item
+ * shows but cannot be ordered), which is a different thing from 0. `undefined` is
+ * returned only for text that is not a number at all, so a typo never silently
+ * becomes "sin precio".
+ */
+function parsePrice(text: string): number | null | undefined {
+  const trimmed = text.trim();
+  if (trimmed === "") return null;
+  const value = Number(trimmed.replace(",", "."));
+  if (!Number.isFinite(value) || value < 0) return undefined;
+  return Math.round(value * 100) / 100;
+}
+
+function priceToInput(price: number | null): string {
+  return price === null ? "" : String(price);
+}
+
+function cellKey(sizeOptionId: string, styleOptionId: string): string {
+  return `${sizeOptionId}:${styleOptionId}`;
+}
+
+function itemsKey(categoryId: string) {
+  return ["menu", "items", categoryId] as const;
+}
+
+function FlatPriceEditor({ item, categoryId }: { item: MenuItem; categoryId: string }) {
+  const queryClient = useQueryClient();
+  const { location } = useActiveLocation();
+  const [text, setText] = useState(() => priceToInput(item.flatPrice));
+  const [invalid, setInvalid] = useState(false);
+
+  const save = useMutation({
+    mutationFn: (price: number | null) => menuApi.setFlatPrice(item.id, price),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: itemsKey(categoryId) });
+      void queryClient.invalidateQueries({ queryKey: ["menu", "tree"] });
+    }
+  });
+
+  const commit = (raw: string) => {
+    const parsed = parsePrice(raw);
+    if (parsed === undefined) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    save.mutate(parsed);
+  };
+
+  return (
+    <div className="stack">
+      <div className="price-input-group">
+        <Field label="Precio">
+          <input
+            inputMode="decimal"
+            placeholder="Sin precio"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+          />
+        </Field>
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={save.isPending}
+          onClick={() => commit(text)}
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={save.isPending || item.flatPrice === null}
+          onClick={() => {
+            setText("");
+            commit("");
+          }}
+        >
+          Quitar precio
+        </button>
+      </div>
+
+      {item.flatPrice === null ? (
+        <span className="no-price">Sin precio · se muestra como «Pregunta el precio»</span>
+      ) : (
+        <span className="muted">Actual: {formatMoney(item.flatPrice, location?.currency)}</span>
+      )}
+
+      {invalid ? <p className="notice notice-error">Escribe un número, o deja vacío para «sin precio».</p> : null}
+      <ErrorNotice error={save.error} title="No se pudo guardar el precio" />
+    </div>
+  );
+}
+
+function MatrixEditor({
+  item,
+  categoryId,
+  sizeOptions,
+  styleOptions
+}: {
+  item: MenuItem;
+  categoryId: string;
+  sizeOptions: SizeOption[];
+  styleOptions: StyleOption[];
+}) {
+  const queryClient = useQueryClient();
+  const [cells, setCells] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const cell of item.priceCells) {
+      initial[cellKey(cell.sizeOptionId, cell.styleOptionId)] = priceToInput(cell.price);
+    }
+    return initial;
+  });
+  const [invalid, setInvalid] = useState(false);
+
+  const save = useMutation({
+    mutationFn: (payload: PriceMatrixCellInput[]) => menuApi.replacePriceMatrix(item.id, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: itemsKey(categoryId) });
+      void queryClient.invalidateQueries({ queryKey: ["menu", "tree"] });
+    }
+  });
+
+  if (sizeOptions.length === 0 || styleOptions.length === 0) {
+    return (
+      <p className="muted">
+        Esta categoría todavía no tiene tamaños o estilos, así que no hay matriz que editar.
+      </p>
+    );
+  }
+
+  const onSave = () => {
+    const payload: PriceMatrixCellInput[] = [];
+    for (const size of sizeOptions) {
+      for (const style of styleOptions) {
+        const parsed = parsePrice(cells[cellKey(size.id, style.id)] ?? "");
+        if (parsed === undefined) {
+          setInvalid(true);
+          return;
+        }
+        payload.push({ sizeOptionId: size.id, styleOptionId: style.id, price: parsed });
+      }
+    }
+    setInvalid(false);
+    save.mutate(payload);
+  };
+
+  const nullCount = sizeOptions.length * styleOptions.length -
+    sizeOptions.reduce(
+      (acc, size) =>
+        acc +
+        styleOptions.filter((style) => (cells[cellKey(size.id, style.id)] ?? "").trim() !== "").length,
+      0
+    );
+
+  return (
+    <div className="stack">
+      <div className="matrix-wrap">
+        <table className="matrix">
+          <thead>
+            <tr>
+              <th>Tamaño</th>
+              {styleOptions.map((style) => (
+                <th key={style.id}>{style.name}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sizeOptions.map((size) => (
+              <tr key={size.id}>
+                <td>{size.name}</td>
+                {styleOptions.map((style) => {
+                  const key = cellKey(size.id, style.id);
+                  const value = cells[key] ?? "";
+                  return (
+                    <td key={style.id} className={value.trim() === "" ? "cell-null" : undefined}>
+                      <input
+                        inputMode="decimal"
+                        placeholder="—"
+                        aria-label={`${size.name} · ${style.name}`}
+                        value={value}
+                        onChange={(event) =>
+                          setCells((current) => ({ ...current, [key]: event.target.value }))
+                        }
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="row">
+        <button type="button" className="btn btn-primary btn-sm" disabled={save.isPending} onClick={onSave}>
+          {save.isPending ? "Guardando…" : "Guardar matriz"}
+        </button>
+        <span className="muted">
+          Una celda vacía queda «sin precio» y no se puede pedir.
+          {nullCount > 0 ? ` (${nullCount} sin precio)` : ""}
+        </span>
+      </div>
+
+      {invalid ? <p className="notice notice-error">Alguna celda no es un número válido.</p> : null}
+      {save.isSuccess && !save.isPending ? <SuccessNotice>Matriz guardada.</SuccessNotice> : null}
+      <ErrorNotice error={save.error} title="No se pudo guardar la matriz" />
+    </div>
+  );
+}
+
+function ChoiceRow({ groupId, choice, categoryId }: {
+  groupId: string;
+  choice: OptionGroup["choices"][number];
+  categoryId: string;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(choice.name);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: itemsKey(categoryId) });
+
+  const update = useMutation({
+    mutationFn: (input: { name?: string; available?: boolean }) => menuApi.updateChoice(choice.id, input),
+    onSuccess: () => void invalidate()
+  });
+
+  const remove = useMutation({
+    mutationFn: () => menuApi.removeChoice(choice.id),
+    onSuccess: () => void invalidate()
+  });
+
+  return (
+    <div className="choice-row" data-group={groupId}>
+      <input
+        aria-label="Nombre de la opción"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        onBlur={() => {
+          if (name.trim() !== "" && name !== choice.name) update.mutate({ name: name.trim() });
+        }}
+        style={{ maxWidth: "240px" }}
+      />
+      <Toggle
+        label="Disponible"
+        checked={choice.available}
+        disabled={update.isPending}
+        onChange={(next) => update.mutate({ available: next })}
+      />
+      <button
+        type="button"
+        className="btn btn-sm btn-danger"
+        disabled={remove.isPending}
+        onClick={() => {
+          if (window.confirm(`¿Eliminar «${choice.name}»?`)) remove.mutate();
+        }}
+      >
+        Eliminar
+      </button>
+      <ErrorNotice error={update.error ?? remove.error} />
+    </div>
+  );
+}
+
+function OptionGroupBlock({ group, categoryId }: { group: OptionGroup; categoryId: string }) {
+  const queryClient = useQueryClient();
+  const [choiceName, setChoiceName] = useState("");
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: itemsKey(categoryId) });
+
+  const addChoice = useMutation({
+    mutationFn: () =>
+      menuApi.createChoice(group.id, {
+        name: choiceName.trim(),
+        priceDelta: 0,
+        priceOverride: null,
+        available: true,
+        sortOrder: group.choices.length
+      }),
+    onSuccess: () => {
+      setChoiceName("");
+      void invalidate();
+    }
+  });
+
+  const removeGroup = useMutation({
+    mutationFn: () => menuApi.removeOptionGroup(group.id),
+    onSuccess: () => void invalidate()
+  });
+
+  return (
+    <div className="item-card">
+      <div className="item-card-head">
+        <div>
+          <h3>{group.name}</h3>
+          <span className="muted">
+            {group.selectionType === "SINGLE" ? "Elige una" : "Elige varias"} ·{" "}
+            {group.required ? "obligatorio" : "opcional"} · {group.choices.length} opciones
+          </span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-sm btn-danger"
+          disabled={removeGroup.isPending}
+          onClick={() => {
+            if (window.confirm(`¿Eliminar el grupo «${group.name}» y todas sus opciones?`)) {
+              removeGroup.mutate();
+            }
+          }}
+        >
+          Eliminar grupo
+        </button>
+      </div>
+
+      {group.choices.map((choice) => (
+        <ChoiceRow key={choice.id} groupId={group.id} choice={choice} categoryId={categoryId} />
+      ))}
+
+      <form
+        className="row"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (choiceName.trim() !== "") addChoice.mutate();
+        }}
+      >
+        <input
+          placeholder="Nueva opción (p. ej. BBQ)"
+          value={choiceName}
+          onChange={(event) => setChoiceName(event.target.value)}
+          style={{ maxWidth: "240px" }}
+        />
+        <button type="submit" className="btn btn-sm" disabled={addChoice.isPending}>
+          Agregar
+        </button>
+      </form>
+
+      <ErrorNotice error={addChoice.error ?? removeGroup.error} />
+    </div>
+  );
+}
+
+function ItemCard({
+  item,
+  categoryId,
+  sizeOptions,
+  styleOptions
+}: {
+  item: MenuItem;
+  categoryId: string;
+  sizeOptions: SizeOption[];
+  styleOptions: StyleOption[];
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(item.name);
+  const [description, setDescription] = useState(item.description ?? "");
+  const [subgroupLabel, setSubgroupLabel] = useState(item.subgroupLabel ?? "");
+  const [groupName, setGroupName] = useState("");
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: itemsKey(categoryId) });
+    void queryClient.invalidateQueries({ queryKey: ["menu", "tree"] });
+  };
+
+  const saveDetails = useMutation({
+    mutationFn: () =>
+      menuApi.updateItem(item.id, {
+        name: name.trim(),
+        description: description.trim() === "" ? null : description.trim(),
+        subgroupLabel: subgroupLabel.trim() === "" ? null : subgroupLabel.trim()
+      }),
+    onSuccess: invalidate
+  });
+
+  const setAvailability = useMutation({
+    mutationFn: (available: boolean) => menuApi.setAvailability(item.id, available),
+    onSuccess: invalidate
+  });
+
+  const removeItem = useMutation({
+    mutationFn: () => menuApi.removeItem(item.id),
+    onSuccess: invalidate
+  });
+
+  const addGroup = useMutation({
+    mutationFn: () =>
+      menuApi.createOptionGroup(item.id, {
+        name: groupName.trim(),
+        selectionType: "SINGLE",
+        required: true,
+        minSelections: 1,
+        maxSelections: 1,
+        sortOrder: item.optionGroups.length
+      }),
+    onSuccess: () => {
+      setGroupName("");
+      invalidate();
+    }
+  });
+
+  const unpriced =
+    item.itemType === "FLAT"
+      ? item.flatPrice === null
+      : item.priceCells.length === 0 || item.priceCells.some((cell) => cell.price === null);
+
+  return (
+    <div className="item-card">
+      <div className="item-card-head">
+        <div>
+          <h3>{item.name}</h3>
+          <span className="muted mono">{item.slug}</span>
+          <div className="row" style={{ marginTop: "4px" }}>
+            <Badge tone="info">
+              {item.itemType === "FLAT" ? "Precio fijo" : "Tamaño × estilo"}
+            </Badge>
+            {item.available ? <Badge tone="ok">Disponible</Badge> : <Badge tone="muted">Agotado</Badge>}
+            {unpriced ? <Badge tone="warn">Sin precio</Badge> : null}
+            {item.isFeatured ? <Badge tone="warn">Favorita</Badge> : null}
+            {item.ageRestricted ? <Badge tone="muted">+18</Badge> : null}
+          </div>
+        </div>
+        <div className="row">
+          <Toggle
+            label="Disponible"
+            checked={item.available}
+            disabled={setAvailability.isPending}
+            onChange={(next) => setAvailability.mutate(next)}
+          />
+          <button type="button" className="btn btn-sm" onClick={() => setOpen((value) => !value)}>
+            {open ? "Cerrar" : "Editar"}
+          </button>
+        </div>
+      </div>
+
+      <ErrorNotice error={setAvailability.error} title="No se pudo cambiar la disponibilidad" />
+
+      {open ? (
+        <>
+          <div className="grid-2">
+            <Field label="Nombre">
+              <input value={name} onChange={(event) => setName(event.target.value)} />
+            </Field>
+            <Field label="Descripción">
+              <input value={description} onChange={(event) => setDescription(event.target.value)} />
+            </Field>
+            <Field
+              label="Subgrupo"
+              hint='Encabezado dentro de la lista, ej. "Cafés y tés" en una categoría de frappés y cafés. Vacío = sin encabezado propio.'
+            >
+              <input value={subgroupLabel} onChange={(event) => setSubgroupLabel(event.target.value)} />
+            </Field>
+          </div>
+          <div className="row">
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              disabled={saveDetails.isPending || name.trim() === ""}
+              onClick={() => saveDetails.mutate()}
+            >
+              {saveDetails.isPending ? "Guardando…" : "Guardar datos"}
+            </button>
+          </div>
+          <ErrorNotice error={saveDetails.error} title="No se pudieron guardar los datos" />
+
+          {item.itemType === "FLAT" ? (
+            <FlatPriceEditor item={item} categoryId={categoryId} />
+          ) : (
+            <MatrixEditor
+              item={item}
+              categoryId={categoryId}
+              sizeOptions={sizeOptions}
+              styleOptions={styleOptions}
+            />
+          )}
+
+          <div className="stack">
+            <h3>Grupos de opciones</h3>
+            {item.optionGroups.length === 0 ? (
+              <p className="muted">Sin grupos. Úsalos para sabores de alitas, tipos de pasta, etc.</p>
+            ) : (
+              item.optionGroups.map((group) => (
+                <OptionGroupBlock key={group.id} group={group} categoryId={categoryId} />
+              ))
+            )}
+            <form
+              className="row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (groupName.trim() !== "") addGroup.mutate();
+              }}
+            >
+              <input
+                placeholder="Nuevo grupo (p. ej. Salsa)"
+                value={groupName}
+                onChange={(event) => setGroupName(event.target.value)}
+                style={{ maxWidth: "240px" }}
+              />
+              <button type="submit" className="btn btn-sm" disabled={addGroup.isPending}>
+                Agregar grupo
+              </button>
+            </form>
+            <ErrorNotice error={addGroup.error} />
+          </div>
+
+          <div className="row">
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              disabled={removeItem.isPending}
+              onClick={() => {
+                if (window.confirm(`¿Eliminar «${item.name}» del menú?`)) removeItem.mutate();
+              }}
+            >
+              Eliminar producto
+            </button>
+          </div>
+          <ErrorNotice error={removeItem.error} title="No se pudo eliminar el producto" />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function NewItemForm({ categoryId, nextSortOrder }: { categoryId: string; nextSortOrder: number }) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [itemType, setItemType] = useState<ItemType>("FLAT");
+  const [price, setPrice] = useState("");
+  const [invalid, setInvalid] = useState(false);
+
+  const create = useMutation({
+    mutationFn: (flatPrice: number | null) =>
+      menuApi.createItem(categoryId, {
+        slug: slugify(name),
+        name: name.trim(),
+        description: null,
+        subgroupLabel: null,
+        itemType,
+        flatPrice: itemType === "FLAT" ? flatPrice : null,
+        toppingColors: null,
+        isFeatured: false,
+        ageRestricted: false,
+        available: true,
+        sortOrder: nextSortOrder
+      }),
+    onSuccess: () => {
+      setName("");
+      setPrice("");
+      void queryClient.invalidateQueries({ queryKey: itemsKey(categoryId) });
+      void queryClient.invalidateQueries({ queryKey: ["menu", "tree"] });
+    }
+  });
+
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (name.trim() === "") return;
+    const parsed = parsePrice(price);
+    if (parsed === undefined) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    create.mutate(parsed);
+  };
+
+  return (
+    <Panel title="Nuevo producto">
+      <form className="toolbar" onSubmit={onSubmit}>
+        <Field label="Nombre" hint={name ? `Clave: ${slugify(name)}` : undefined}>
+          <input value={name} onChange={(event) => setName(event.target.value)} required />
+        </Field>
+        <Field label="Tipo">
+          <select value={itemType} onChange={(event) => setItemType(event.target.value as ItemType)}>
+            <option value="FLAT">Precio fijo</option>
+            <option value="SIZE_STYLE_MATRIX">Tamaño × estilo</option>
+          </select>
+        </Field>
+        {itemType === "FLAT" ? (
+          <Field label="Precio" hint="Vacío = sin precio">
+            <input
+              inputMode="decimal"
+              placeholder="Sin precio"
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+            />
+          </Field>
+        ) : null}
+        <button type="submit" className="btn btn-primary" disabled={create.isPending}>
+          {create.isPending ? "Creando…" : "Crear"}
+        </button>
+      </form>
+      {invalid ? <p className="notice notice-error">El precio no es un número válido.</p> : null}
+      <ErrorNotice error={create.error} title="No se pudo crear el producto" />
+    </Panel>
+  );
+}
+
+export function CategoryPage() {
+  const { categoryId = "" } = useParams();
+
+  const category = useQuery({
+    queryKey: ["menu", "category", categoryId],
+    queryFn: () => menuApi.getCategory(categoryId),
+    enabled: categoryId !== ""
+  });
+
+  const items = useQuery({
+    queryKey: itemsKey(categoryId),
+    queryFn: () => menuApi.listItems(categoryId).then((response) => response.items),
+    enabled: categoryId !== ""
+  });
+
+  if (category.isPending) return <Loading label="Cargando categoría…" />;
+
+  if (category.error || !category.data) {
+    return (
+      <>
+        <PageHeader title="Categoría" />
+        <Panel>
+          <ErrorNotice error={category.error} title="No se pudo cargar la categoría" />
+          <Link className="btn" to="/menu">
+            Volver al menú
+          </Link>
+        </Panel>
+      </>
+    );
+  }
+
+  const sizeOptions = [...category.data.sizeOptions].sort((a, b) => a.sortOrder - b.sortOrder);
+  const styleOptions = [...category.data.styleOptions].sort((a, b) => a.sortOrder - b.sortOrder);
+  const rows = items.data ?? [];
+
+  return (
+    <>
+      <PageHeader
+        title={category.data.category.name}
+        description={category.data.category.description ?? undefined}
+        actions={
+          <Link className="btn" to="/menu">
+            Volver al menú
+          </Link>
+        }
+      />
+
+      <NewItemForm categoryId={categoryId} nextSortOrder={rows.length} />
+
+      <ErrorNotice error={items.error} title="No se pudieron cargar los productos" />
+      {items.isPending ? <Loading /> : null}
+
+      {!items.isPending && rows.length === 0 ? (
+        <EmptyState title="Sin productos">Agrega el primer producto de esta categoría.</EmptyState>
+      ) : null}
+
+      <div className="stack">
+        {rows.map((item) => (
+          <ItemCard
+            key={item.id}
+            item={item}
+            categoryId={categoryId}
+            sizeOptions={sizeOptions}
+            styleOptions={styleOptions}
+          />
+        ))}
+      </div>
+    </>
+  );
+}

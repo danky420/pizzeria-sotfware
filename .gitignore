@@ -45,12 +45,26 @@ env/
 .ruff_cache/
 
 # ---------------------------------------------------------------
-# Node — not used yet, here in case tooling gets added later
+# Node — backend/ (Fastify + Prisma) and admin/ (SPA)
 # ---------------------------------------------------------------
 node_modules/
 npm-debug.log*
 yarn-error.log*
 package-lock.json.bak
+
+# Compiled output. The bare `dist/` rule at the top of this file already
+# covers backend/dist and admin/dist at any depth; these cover the rest.
+build/
+*.tsbuildinfo
+
+# Test and dev-server caches
+coverage/
+.vite/
+.vitest/
+
+# Prisma generates its client into node_modules/.prisma (already ignored).
+# This catches a custom `output` target if one is ever configured.
+backend/src/generated/
 
 # ---------------------------------------------------------------
 # Playwright

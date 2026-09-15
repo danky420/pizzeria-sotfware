@@ -1,0 +1,156 @@
+import type { ReactNode } from "react";
+import { ApiError } from "../api/client";
+
+export function Loading({ label = "Cargando…" }: { label?: string }) {
+  return (
+    <div className="loading" role="status">
+      {label}
+    </div>
+  );
+}
+
+export function PageHeader({
+  title,
+  description,
+  actions
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <header className="page-header">
+      <div>
+        <h1>{title}</h1>
+        {description ? <p className="muted">{description}</p> : null}
+      </div>
+      {actions ? <div className="page-header-actions">{actions}</div> : null}
+    </header>
+  );
+}
+
+export function Panel({
+  title,
+  description,
+  actions,
+  children
+}: {
+  title?: string;
+  description?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="panel">
+      {title || actions ? (
+        <div className="panel-head">
+          <div>
+            {title ? <h2>{title}</h2> : null}
+            {description ? <p className="muted">{description}</p> : null}
+          </div>
+          {actions ? <div className="panel-actions">{actions}</div> : null}
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <div className="empty-state">
+      <p className="empty-title">{title}</p>
+      {children ? <p className="muted">{children}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * A 501 is a phase that has not landed yet, not a failure the operator caused —
+ * it reads as an empty state so nobody mistakes it for lost data.
+ */
+export function ErrorNotice({ error, title }: { error: unknown; title?: string }) {
+  if (!error) return null;
+
+  if (error instanceof ApiError && error.isNotImplemented) {
+    return (
+      <div className="notice notice-pending">
+        <strong>Aún no disponible</strong>
+        <p>{error.message}</p>
+      </div>
+    );
+  }
+
+  const message = error instanceof Error ? error.message : "Ocurrió un error";
+  const fields = error instanceof ApiError ? error.fieldErrors : [];
+
+  return (
+    <div className="notice notice-error" role="alert">
+      <strong>{title ?? "No se pudo completar la acción"}</strong>
+      <p>{message}</p>
+      {fields.length > 0 ? (
+        <ul>
+          {fields.map((detail, index) => (
+            <li key={`${detail.path ?? index}`}>
+              {detail.path ? <code>{detail.path}</code> : null} {detail.message}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+export function SuccessNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="notice notice-ok" role="status">
+      {children}
+    </div>
+  );
+}
+
+export function Field({
+  label,
+  hint,
+  children
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      {children}
+      {hint ? <span className="field-hint">{hint}</span> : null}
+    </label>
+  );
+}
+
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="toggle">
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+export function Badge({ tone, children }: { tone?: "ok" | "warn" | "muted" | "info"; children: ReactNode }) {
+  return <span className={`badge badge-${tone ?? "muted"}`}>{children}</span>;
+}

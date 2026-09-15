@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum ItemType {
+  FLAT
+  SIZE_STYLE_MATRIX
+}
+
+enum SelectionType {
+  SINGLE
+  MULTIPLE
+}
+
+enum FulfillmentType {
+  PICKUP
+  DELIVERY
+  DINE_IN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum PromotionScope {
+  ORDER
+  CATEGORY
+  ITEM
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  waNumber  String
+  timezone  String   @default("America/Mexico_City")
+  currency  String   @default("MXN")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessHours BusinessHours[]
+  adminUsers    AdminUser[]
+  categories    MenuCategory[]
+  promotions    Promotion[]
+  customers     Customer[]
+  orders        Order[]
+}
+
+model BusinessHours {
+  id         String   @id @default(cuid())
+  locationId String
+  dayOfWeek  Int
+  opensAt    Int?
+  closesAt   Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, dayOfWeek])
+  @@index([locationId])
+}
+
+model AdminUser {
+  id                  String    @id @default(cuid())
+  locationId          String?
+  email               String    @unique
+  name                String
+  passwordHash        String
+  role                AdminRole @default(STAFF)
+  active              Boolean   @default(true)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  location Location?      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  sessions AdminSession[]
+
+  @@index([locationId])
+}
+
+model AdminSession {
+  id          String   @id
+  adminUserId String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  userAgent   String?
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+}
+
+model MenuCategory {
+  id          String   @id @default(cuid())
+  locationId  String
+  slug        String
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  location     Location                  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  sizeOptions  MenuCategorySizeOption[]
+  styleOptions MenuCategoryStyleOption[]
+  items        MenuItem[]
+  promotions   Promotion[]
+
+  @@unique([locationId, slug])
+  @@index([locationId])
+}
+
+model MenuCategorySizeOption {
+  id         String   @id @default(cuid())
+  categoryId String
+  slug       String
+  name       String
+  comment    String?
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category   MenuCategory        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priceCells MenuItemPriceCell[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+}
+
+model MenuCategoryStyleOption {
+  id          String   @id @default(cuid())
+  categoryId  String
+  slug        String
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category   MenuCategory        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priceCells MenuItemPriceCell[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+}
+
+model MenuItem {
+  id            String   @id @default(cuid())
+  categoryId    String
+  slug          String
+  name          String
+  description   String?
+  itemType      ItemType @default(FLAT)
+  flatPrice     Decimal? @db.Decimal(10, 2)
+  // Cosmetic sub-heading within a category's flat-item list, e.g. "Frappés" /
+  // "Cafés y tés" inside one "Frappés y café" category. Null means the item
+  // renders in its category's undifferentiated list.
+  subgroupLabel String?
+  toppingColors Json?
+  isFeatured    Boolean  @default(false)
+  ageRestricted Boolean  @default(false)
+  available     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  category     MenuCategory          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  priceCells   MenuItemPriceCell[]
+  optionGroups MenuItemOptionGroup[]
+  orderItems   OrderItem[]
+  promotions   Promotion[]
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+}
+
+model MenuItemPriceCell {
+  id            String   @id @default(cuid())
+  menuItemId    String
+  sizeOptionId  String
+  styleOptionId String
+  price         Decimal? @db.Decimal(10, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  menuItem    MenuItem                @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  sizeOption  MenuCategorySizeOption  @relation(fields: [sizeOptionId], references: [id], onDelete: Cascade)
+  styleOption MenuCategoryStyleOption @relation(fields: [styleOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, sizeOptionId, styleOptionId])
+  @@index([menuItemId])
+}
+
+model MenuItemOptionGroup {
+  id            String        @id @default(cuid())
+  menuItemId    String
+  name          String
+  selectionType SelectionType @default(SINGLE)
+  required      Boolean       @default(true)
+  minSelections Int           @default(1)
+  maxSelections Int           @default(1)
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  menuItem MenuItem               @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  choices  MenuItemOptionChoice[]
+
+  @@index([menuItemId])
+}
+
+model MenuItemOptionChoice {
+  id            String   @id @default(cuid())
+  optionGroupId String
+  name          String
+  priceDelta    Decimal  @default(0) @db.Decimal(10, 2)
+  priceOverride Decimal? @db.Decimal(10, 2)
+  available     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  optionGroup MenuItemOptionGroup @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
+
+  @@index([optionGroupId])
+}
+
+model Promotion {
+  id            String         @id @default(cuid())
+  locationId    String
+  name          String
+  description   String?
+  code          String?
+  discountType  DiscountType
+  discountValue Decimal        @db.Decimal(10, 2)
+  scope         PromotionScope @default(ORDER)
+  categoryId    String?
+  menuItemId    String?
+  minSubtotal   Decimal?       @db.Decimal(10, 2)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  location Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  category MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  menuItem MenuItem?     @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  orders   Order[]
+
+  @@unique([locationId, code])
+  @@index([locationId])
+}
+
+model Customer {
+  id          String    @id @default(cuid())
+  locationId  String
+  phone       String
+  name        String?
+  addressText String?
+  notes       String?
+  orderCount  Int       @default(0)
+  totalSpent  Decimal   @default(0) @db.Decimal(12, 2)
+  lastOrderAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  orders   Order[]
+
+  @@unique([locationId, phone])
+  @@index([locationId])
+}
+
+model Order {
+  id String @id @default(cuid())
+
+  // Short human-readable sequence the customer is given on the confirmation screen
+  // and staff read back on the phone. A Postgres sequence, not a per-location
+  // counter, so two simultaneous orders can never collide on it.
+  orderNumber Int @unique @default(autoincrement())
+
+  locationId      String
+  customerId      String?
+  fulfillmentType FulfillmentType @default(PICKUP)
+  status          OrderStatus     @default(PENDING)
+  customerName    String?
+  // Required: with WhatsApp out of the order path this is the only way staff can
+  // reach a customer about their order.
+  customerPhone   String
+  customerAddress String?
+  customerNote    String?
+  subtotal        Decimal         @db.Decimal(12, 2)
+  discountTotal   Decimal         @default(0) @db.Decimal(12, 2)
+  total           Decimal         @db.Decimal(12, 2)
+  promotionId     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  location  Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  customer  Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  promotion Promotion?  @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  items     OrderItem[]
+
+  @@index([locationId, createdAt])
+  @@index([customerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  menuItemId     String?
+  nameSnapshot   String
+  sizeSnapshot   String?
+  styleSnapshot  String?
+  optionSnapshot String?
+  notes          String?
+  unitPrice      Decimal  @db.Decimal(10, 2)
+  quantity       Int
+  lineTotal      Decimal  @db.Decimal(12, 2)
+  createdAt      DateTime @default(now())
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem? @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([menuItemId])
+}

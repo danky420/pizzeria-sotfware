@@ -1,0 +1,225 @@
+export type AdminRole = "SUPER_ADMIN" | "OWNER" | "MANAGER" | "STAFF";
+export type ItemType = "FLAT" | "SIZE_STYLE_MATRIX";
+export type SelectionType = "SINGLE" | "MULTIPLE";
+export type DiscountType = "PERCENT" | "FIXED";
+export type PromotionScope = "ORDER" | "CATEGORY" | "ITEM";
+export type FulfillmentType = "PICKUP" | "DELIVERY" | "DINE_IN";
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+  locationId: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  locationId: string | null;
+  email: string;
+  name: string;
+  role: AdminRole;
+  active: boolean;
+  lockedUntil: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface Location {
+  id: string;
+  slug: string;
+  name: string;
+  waNumber: string;
+  timezone: string;
+  currency: string;
+  active: boolean;
+}
+
+export interface SizeOption {
+  id: string;
+  slug: string;
+  name: string;
+  comment: string | null;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface StyleOption {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface PriceCell {
+  id: string;
+  sizeOptionId: string;
+  styleOptionId: string;
+  price: number | null;
+}
+
+export interface OptionChoice {
+  id: string;
+  name: string;
+  priceDelta: number;
+  priceOverride: number | null;
+  available: boolean;
+  sortOrder: number;
+}
+
+export interface OptionGroup {
+  id: string;
+  menuItemId: string;
+  name: string;
+  selectionType: SelectionType;
+  required: boolean;
+  minSelections: number;
+  maxSelections: number;
+  sortOrder: number;
+  choices: OptionChoice[];
+}
+
+export interface MenuItem {
+  id: string;
+  categoryId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  itemType: ItemType;
+  flatPrice: number | null;
+  subgroupLabel: string | null;
+  toppingColors: string[] | null;
+  isFeatured: boolean;
+  ageRestricted: boolean;
+  available: boolean;
+  sortOrder: number;
+  priceCells: PriceCell[];
+  optionGroups: OptionGroup[];
+}
+
+export interface MenuCategory {
+  id: string;
+  locationId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface MenuCategoryTree extends MenuCategory {
+  sizeOptions: SizeOption[];
+  styleOptions: StyleOption[];
+  items: MenuItem[];
+}
+
+export interface BusinessHoursDay {
+  dayOfWeek: number;
+  opensAt: number | null;
+  closesAt: number | null;
+}
+
+export interface Promotion {
+  id: string;
+  locationId: string;
+  name: string;
+  description: string | null;
+  code: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  scope: PromotionScope;
+  categoryId: string | null;
+  menuItemId: string | null;
+  minSubtotal: number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+}
+
+export interface Customer {
+  id: string;
+  locationId: string;
+  phone: string;
+  name: string | null;
+  addressText: string | null;
+  orderCount: number;
+  totalSpent: number;
+  lastOrderAt: string | null;
+}
+
+export interface OrderItem {
+  id: string;
+  menuItemId: string | null;
+  name: string;
+  size: string | null;
+  style: string | null;
+  option: string | null;
+  notes: string | null;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: number;
+  locationId: string;
+  customerId: string | null;
+  fulfillmentType: FulfillmentType;
+  status: OrderStatus;
+  customerName: string | null;
+  customerPhone: string;
+  customerAddress: string | null;
+  customerNote: string | null;
+  subtotal: number;
+  discountTotal: number;
+  total: number;
+  promotionId: string | null;
+  createdAt: string;
+  items: OrderItem[];
+}
+
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  pageCount: number;
+}
+
+export interface StatusBreakdownRow {
+  status: OrderStatus;
+  orderCount: number;
+  revenue: number | null;
+}
+
+export interface AnalyticsSummary {
+  from: string | null;
+  to: string | null;
+  // The server counts every non-CANCELLED order as revenue so a dashboard read
+  // mid-service is not empty; it reports which statuses those were rather than
+  // leaving the figure to be reverse-engineered.
+  countedStatuses: OrderStatus[];
+  orderCount: number;
+  revenue: number | null;
+  subtotal: number | null;
+  discountTotal: number | null;
+  averageOrderValue: number | null;
+  cancelledCount: number;
+  byStatus: StatusBreakdownRow[];
+}
+
+export interface TopItem {
+  menuItemId: string | null;
+  name: string;
+  quantity: number;
+  revenue: number | null;
+}
