@@ -21,7 +21,7 @@ New top-level directory `customer/` (sibling to `backend/` and `admin/`), a Reac
 - **Checkout**: already ported to the real API in the previous phase — same request/response contract (`POST /api/public/locations/:slug/orders`, required phone, server-computed prices, on-screen confirmation with order number, visible/retryable errors, disabled state with explanation when the backend is unreachable). Port the logic, don't redesign the flow.
 - **Open/closed status**: computed from the shop's wall clock in `America/Mexico_City` (never the visitor's timezone) — but now fetch hours from `GET /api/public/locations/:slug/hours` instead of a hardcoded `HORAS` array, so admin-edited hours actually take effect.
 - **Menu data source**: `GET /api/public/locations/:slug/menu` replaces every hardcoded array (`PIZZAS`, `ESPECIALES`, `BURGERS`, `ALITAS_65/80`, `PASTAS`, `POSTRES`, `FRAPPES`, `CAFES`, `REFRESCOS`, `CERVEZAS`, `TALLAS`, `ESTILOS`). The exact response shape is already implemented and live in `backend/src/routes/public/menu.ts` — read it, don't guess.
-- **Dark mode**, brand colors (`#D22B27` red, `#FFD429` yellow), the general WhatsApp contact link (`wa-directo` — unrelated to ordering, stays), the 18+ beer notice, installable home-screen icon/manifest.
+- **Dark mode**, brand colors (`#D22B27` red, `#FFD429` yellow), the 18+ beer notice, installable home-screen icon/manifest. (The general WhatsApp contact link, `wa-directo`, was later removed entirely — the site is the one ordering *and* contact channel now; footer phone numbers cover contact.)
 
 ## Build sequencing
 

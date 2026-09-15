@@ -32,9 +32,8 @@ export function OrdersQueuePage() {
     queryKey: ["orders", location.id, status, page],
     queryFn: () => ordersApi.list(location.id, { status, page, pageSize: PAGE_SIZE }),
     // The whole point of this app: nobody behind the counter should have to
-    // remember to refresh. 12s matches `admin/`'s queue and sits inside the
-    // plan's 10-15s window.
-    refetchInterval: 12_000,
+    // remember to refresh.
+    refetchInterval: 10_000,
     placeholderData: keepPreviousData
   });
 

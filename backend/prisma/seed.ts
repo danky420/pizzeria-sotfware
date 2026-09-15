@@ -180,7 +180,7 @@ const HORAS: { d: string; a: number | null; c: number | null }[] = [
 
 // Section list and slugs from SECS in src/archive/chesare-v2-vanilla-js.html.
 const CATEGORIES = [
-  { slug: "pizzas", name: "Pizzas", description: "Seis tamaños · orilla rellena o extra queso" },
+  { slug: "pizzas", name: "Pizzas", description: "Seis tamaños, con orilla rellena o extra queso si quieres" },
   { slug: "hamburguesas", name: "Hamburguesas", description: null },
   { slug: "alitas", name: "Alitas y boneless", description: "15 salsas" },
   { slug: "pastas", name: "Pastas", description: "Incluye pan de ajo" },

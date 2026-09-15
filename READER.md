@@ -294,7 +294,7 @@ hardcoded menu data in any frontend.
 | Menu, prices, sizes, styles, option groups | Postgres, edited in `admin/`. Initial values in `backend/prisma/seed.ts`. |
 | Opening hours | `BusinessHours` rows, edited in `admin/`. Served by `GET /api/public/locations/:slug/hours`. |
 | Timezone | `Location.timezone` (`America/Mexico_City`). Deliberate — never the visitor's timezone. |
-| WhatsApp number | `Location.waNumber`. Contact link only, not the order channel. |
+| WhatsApp number | `Location.waNumber`. No longer surfaced as a contact link in `customer/` — the site is the ordering channel, and the footer's phone numbers are the contact path instead. Field stays seeded for now in case that changes. |
 | Location slug | `LOCATION_SLUG` in `customer/src/api/client.ts` (`chesare-maltrata`). |
 | Backend config | `.env` — see above. |
 | Colours | CSS custom properties on `:root`, per app, with dark-mode overrides. Brand red `#D22B27`, sign yellow `#FFD429`. |
@@ -497,15 +497,15 @@ page makes. Offline or behind a blocker you get the fallback stacks.
    sources). *TODO: get the owner to pick one — the split is costing them
    search traffic.*
 
-2. **The WhatsApp number is still unverified** — `522722603537`, now seeded on
-   `Location.waNumber` rather than hardcoded in a page. Mexican mobile numbers
-   sometimes need `521` + 10 digits rather than `52` + 10, and this has never
-   been tested on a real Mexican handset. **It is no longer the
-   highest-risk line in the codebase**, because ordering no longer depends on
-   it — WhatsApp is a "ask us a question" link now, and a broken one costs a
-   question, not an order. Still worth ten seconds on a real phone. *TODO:
-   test. Also confirm which of the two numbers (272 260 3537 / 272 100 5211)
-   is actually on WhatsApp.*
+2. **WhatsApp is no longer part of the customer site at all** — no "ask a
+   question" button, no `wa.me` link. `customer/` is meant to be the one
+   ordering and contact channel; the footer's phone numbers (`272 260 3537`,
+   `272 100 5211`) are how a customer reaches the shop outside the site.
+   `Location.waNumber` (`522722603537`) stays seeded on the backend in case a
+   WhatsApp surface comes back later, but nothing reads it today. The old
+   unverified-number risk (Mexican mobiles sometimes need `521` + 10 digits
+   rather than `52` + 10) is moot while it's unused; re-verify before wiring
+   it back up.
 
 3. **`customer/` has no offline support yet.** The old static site loaded on a
    bad connection and worked offline once installed to the home screen. The

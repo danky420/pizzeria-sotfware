@@ -18,7 +18,7 @@ import {
  * renders without them.
  */
 const SECTION_COPY: Record<string, { intro?: string; nota?: string }> = {
-  pizzas: { intro: "Elige tu pizza y luego el tamaño. El precio cambia solo." },
+  pizzas: { intro: "Elige tu pizza." },
   alitas: { intro: "Elige tu salsa favorita. Las combinaciones especiales cuestan un poco más." },
   pastas: { nota: "Lasaña por pedido especial. Pregunta al ordenar." }
 };

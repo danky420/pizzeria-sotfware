@@ -9,8 +9,6 @@ import { hhmm, mx, nombreDia } from "./lib/format";
 import { shopStatus } from "./lib/hours";
 import { buildSections, cartName, choicePrice, singleChoiceGroup } from "./lib/menu";
 
-const WA_FALLBACK = "522722603537";
-
 /** Add-ons offered in the cart, resolved against the live menu; a slug the shop
  *  retires simply stops being offered instead of breaking the row. */
 const SUGERENCIAS = [
@@ -177,40 +175,30 @@ export function App(): JSX.Element {
     return () => observer.disconnect();
   }, [sections]);
 
-  const waNumber = menu?.location.waNumber ?? WA_FALLBACK;
-  const waHref = `https://wa.me/${waNumber}?text=${encodeURIComponent(
-    "Hola Pizza's Chesa're! Tengo una pregunta."
-  )}`;
-
   return (
     <>
       <header className="cab">
-        <div className="w">
+        <div className="w hero-fila">
           <img className="marca" src="/marca.webp" alt="Pizza's Chesa're" width={520} height={499} />
-          <div className="cab-info">
-            <h1>Pizza's Chesa're — Maltrata, Veracruz</h1>
-            <span className={estado?.open === false ? "estado off" : "estado"}>
-              <i className="punto" />
-              <span>
-                {estado
-                  ? `${estado.open ? "Abierto" : "Cerrado"}${estado.detalle ? ` · ${estado.detalle}` : ""}`
-                  : "—"}
-              </span>
+          <div className="hero-texto">
+            <h1>Pizza's Chesa're</h1>
+            <p className="hero-tag">Pizza de horno, hecha en Maltrata.</p>
+          </div>
+        </div>
+        <div className="w cab-sub">
+          <span className={estado?.open === false ? "estado off" : "estado"}>
+            <i className="punto" />
+            <span>
+              {estado
+                ? estado.open
+                  ? `Abierto ahora. Cerramos ${estado.detalle.replace(/^cierra /, "a las ")}.`
+                  : estado.detalle
+                    ? `Cerrado. ${estado.detalle.replace(/^abre /, "Abrimos ")}.`
+                    : "Cerrado por ahora."
+                : "Consultando horario…"}
             </span>
-            <p className="dir">
-              Av. Ignacio Zaragoza, Manzana 1
-              <br />
-              Maltrata, Veracruz
-            </p>
-          </div>
-          <div className="acciones">
-            <a className="btn btn-wa" id="wa-directo" href={waHref} target="_blank" rel="noopener">
-              Preguntar por WhatsApp
-            </a>
-            <a className="btn btn-fan" href="tel:+522722603537">
-              Llamar
-            </a>
-          </div>
+          </span>
+          <p className="dir">Av. Ignacio Zaragoza, Manzana 1, Maltrata, Veracruz</p>
         </div>
       </header>
 

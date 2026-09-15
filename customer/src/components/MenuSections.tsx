@@ -58,9 +58,16 @@ function Card({
         {item.description ? <small>{item.description}</small> : null}
       </span>
       <span className="pr">
-        <b className={price === null ? "na" : undefined}>
-          {price === null ? "Pregunta el precio" : desde ? `desde ${mx(price)}` : mx(price)}
-        </b>
+        {price === null ? (
+          <b className="na">Pregunta el precio</b>
+        ) : desde ? (
+          // The price only appears once you pick a size — showing "desde $70"
+          // on every pizza made six very similar numbers the whole point of
+          // the card, when the actual choice is size, not price.
+          <span className="ver">Ver tamaños</span>
+        ) : (
+          <b>{mx(price)}</b>
+        )}
         {price === null ? null : <small>{nota}</small>}
       </span>
     </button>
@@ -135,7 +142,7 @@ export function MenuSections({ sections, onOpen, onQuickAdd }: Props): JSX.Eleme
     <>
       {sections.map((section) => (
         <section key={section.id} id={section.id}>
-          <div className="enc">
+          <div className={section.category.slug === "pizzas" ? "enc anchor" : "enc"}>
             <h2>{section.category.name}</h2>
             {section.category.description ? <span>{section.category.description}</span> : null}
           </div>
