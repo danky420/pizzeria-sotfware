@@ -14,15 +14,23 @@ export const API_READY = API_BASE !== null;
 
 const PUBLIC_PREFIX = `${API_BASE ?? ""}/api/public/locations/${LOCATION_SLUG}`;
 
+/**
+ * The server's error envelope is always `{error:{code,message,details?}}` — see
+ * `backend/src/lib/error-handler.ts`. `details` is only populated for
+ * VALIDATION_ERROR (a list of `{path,message}`); it is kept here so a failure can
+ * be diagnosed rather than swallowed.
+ */
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  readonly details: unknown;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -36,8 +44,15 @@ function safeJson(text: string): unknown {
 
 function toError(status: number, payload: unknown): ApiError {
   if (payload && typeof payload === "object" && "error" in payload) {
-    const envelope = (payload as { error?: { code?: string; message?: string } }).error;
-    return new ApiError(status, envelope?.code ?? "INTERNAL_ERROR", envelope?.message ?? "Error");
+    const envelope = (payload as {
+      error?: { code?: string; message?: string; details?: unknown };
+    }).error;
+    return new ApiError(
+      status,
+      envelope?.code ?? "INTERNAL_ERROR",
+      envelope?.message ?? "Error",
+      envelope?.details
+    );
   }
   return new ApiError(status, "INTERNAL_ERROR", "Error");
 }

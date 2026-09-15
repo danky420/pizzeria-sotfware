@@ -2,8 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import { configureApiBaseUrl } from "@chesare/portal-shared";
 import { App } from "./App";
 import "./styles.css";
+
+// Empty in production: Fastify serves this SPA and the API from one origin, so
+// the session cookie stays same-origin. Dev points it at the API's own port.
+configureApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 const queryClient = new QueryClient({
   defaultOptions: {

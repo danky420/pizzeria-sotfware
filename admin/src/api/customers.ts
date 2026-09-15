@@ -1,5 +1,4 @@
-import { api, query } from "./client";
-import type { Customer, Order, Pagination } from "./types";
+import { api, query, type Customer, type Order, type Pagination } from "@chesare/portal-shared";
 
 export interface CustomerListFilters {
   search?: string;

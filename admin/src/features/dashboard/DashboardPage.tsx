@@ -1,10 +1,18 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import {
+  ErrorNotice,
+  Field,
+  Loading,
+  ordersApi,
+  ORDER_STATUS_LABELS,
+  PageHeader,
+  Panel,
+  type Order,
+  type OrderStatus
+} from "@chesare/portal-shared";
 import { analyticsApi } from "../../api/analytics";
-import { ordersApi } from "../../api/orders";
-import type { Order, OrderStatus } from "../../api/types";
 import { ColumnChart, HorizontalBarChart, StatTile, type ChartPoint } from "../../components/charts";
-import { ErrorNotice, Field, Loading, PageHeader, Panel } from "../../components/ui";
 import {
   dayKeyInZone,
   eachDayKey,
@@ -13,7 +21,6 @@ import {
   shortDayLabel,
   todayIsoDate
 } from "../../lib/format";
-import { ORDER_STATUS_LABELS } from "../../lib/roles";
 import { useActiveLocation, useLocationId } from "../../state/location";
 
 const ORDERS_PAGE_SIZE = 100;

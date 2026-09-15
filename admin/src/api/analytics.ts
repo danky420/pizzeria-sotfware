@@ -1,5 +1,4 @@
-import { api, query } from "./client";
-import type { AnalyticsSummary, TopItem } from "./types";
+import { api, query, type AnalyticsSummary, type TopItem } from "@chesare/portal-shared";
 
 export interface DateRange {
   from: string;

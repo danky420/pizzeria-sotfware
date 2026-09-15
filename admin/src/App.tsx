@@ -1,10 +1,13 @@
-import { AuthProvider } from "./state/auth";
+import { AuthProvider } from "@chesare/portal-shared";
+import { StaffAccountGate } from "./components/guards";
 import { AppRoutes } from "./routes";
 
 export function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <StaffAccountGate>
+        <AppRoutes />
+      </StaffAccountGate>
     </AuthProvider>
   );
 }

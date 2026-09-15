@@ -1,6 +1,13 @@
 export type ItemType = "FLAT" | "SIZE_STYLE_MATRIX";
 export type FulfillmentType = "PICKUP" | "DELIVERY" | "DINE_IN";
 export type SelectionType = "SINGLE" | "MULTIPLE";
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface PublicLocation {
   id: string;
@@ -106,6 +113,17 @@ export interface HoursResponse {
   days: HoursDay[];
 }
 
+/**
+ * Caps copied from `backend/src/schemas/orders.ts` — the server rejects anything
+ * past them with a VALIDATION_ERROR that names a field the customer never saw, so
+ * the inputs stop short of them instead of letting that error be reachable.
+ */
+export const MAX_LINE_QUANTITY = 50;
+export const MAX_NAME_LENGTH = 80;
+export const MAX_PHONE_LENGTH = 25;
+export const MAX_ADDRESS_LENGTH = 200;
+export const MAX_NOTE_LENGTH = 500;
+
 export interface OrderLinePayload {
   itemSlug: string;
   categorySlug?: string;
@@ -119,6 +137,7 @@ export interface SubmitOrderPayload {
   fulfillmentType: FulfillmentType;
   customer: {
     name?: string;
+    /** Required by the server — the only way staff can call back about an order. */
     phone: string;
     address?: string;
     note?: string;
@@ -128,24 +147,35 @@ export interface SubmitOrderPayload {
 
 export interface PlacedOrderItem {
   id: string;
+  menuItemId: string | null;
   name: string;
   size: string | null;
   style: string | null;
   option: string | null;
+  notes: string | null;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
 }
 
+/** Mirrors `presentOrder()` in `backend/src/lib/present.ts`. */
 export interface PlacedOrder {
   id: string;
-  orderNumber: string;
+  /** `Order.orderNumber` is a Postgres autoincrement Int, not a string. */
+  orderNumber: number;
+  locationId: string;
+  customerId: string | null;
   fulfillmentType: FulfillmentType;
+  status: OrderStatus;
   customerName: string | null;
   customerPhone: string | null;
+  customerAddress: string | null;
+  customerNote: string | null;
   subtotal: number;
   discountTotal: number;
   total: number;
+  promotionId: string | null;
+  createdAt: string;
   items: PlacedOrderItem[];
 }
 

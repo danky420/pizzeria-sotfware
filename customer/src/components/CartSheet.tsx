@@ -1,6 +1,14 @@
 import { type JSX, useEffect, useRef, useState } from "react";
 import { ApiError, submitOrder } from "../api/client";
-import type { FulfillmentType, PlacedOrder } from "../api/types";
+import {
+  type FulfillmentType,
+  MAX_ADDRESS_LENGTH,
+  MAX_LINE_QUANTITY,
+  MAX_NAME_LENGTH,
+  MAX_NOTE_LENGTH,
+  MAX_PHONE_LENGTH,
+  type PlacedOrder
+} from "../api/types";
 import { type Cart, type CartRef, toOrderLine } from "../lib/cart";
 import { mx } from "../lib/format";
 
@@ -22,15 +30,30 @@ interface Props {
 
 const SIN_API =
   "Los pedidos en línea no están disponibles por ahora. Llámanos o escríbenos por WhatsApp.";
-const ERROR_GENERICO = "No pudimos enviar tu pedido, inténtalo de nuevo.";
+const ERROR_GENERICO = "No pudimos enviar tu pedido, inténtalo de nuevo. Tu pedido sigue aquí.";
+
+/**
+ * Every code the order endpoint can return, in Spanish. The server's own messages
+ * are English, so they are never shown; an unmapped code falls back to
+ * ERROR_GENERICO, which still says the cart was kept and the button can be pressed
+ * again — there is no WhatsApp fallback on the order path any more, so a failure
+ * must never be silent or a dead end.
+ */
 const ERRORES: Record<string, string> = {
   VALIDATION_ERROR: "Revisa tus datos: algo quedó incompleto o mal escrito.",
+  // `badRequest()` in the pricing/matching code: an item, size or style in the cart
+  // no longer matches the live menu.
+  BAD_REQUEST:
+    "Algo de tu pedido ya no coincide con el menú. Vuelve a cargar la página e inténtalo de nuevo.",
   PRICE_UNAVAILABLE:
     "Uno de los productos no tiene precio publicado. Quítalo del pedido o pregúntanos por WhatsApp.",
   ITEM_UNORDERABLE:
     "Uno de los productos ya no está disponible. Quítalo del pedido e inténtalo de nuevo.",
   RATE_LIMITED: "Estamos recibiendo muchos pedidos. Espera un minuto y vuelve a intentar.",
-  NOT_FOUND: "No pudimos encontrar la pizzería en el sistema. Llámanos para tomar tu pedido."
+  NOT_FOUND: "No pudimos encontrar la pizzería en el sistema. Llámanos para tomar tu pedido.",
+  NETWORK_ERROR:
+    "No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentar: tu pedido sigue aquí.",
+  NO_API: SIN_API
 };
 
 type Campo = "nombre" | "telefono" | "direccion";
@@ -138,7 +161,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
           <h3 id="c-tit">{pedido ? "Pedido confirmado" : "Tu pedido"}</h3>
           <p>
             {pedido
-              ? `Pedido ${pedido.orderNumber}`
+              ? `Pedido #${pedido.orderNumber}`
               : `${cart.pieces} producto${cart.pieces === 1 ? "" : "s"}`}
           </p>
         </div>
@@ -158,7 +181,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
             </div>
             <div className="ok-num">
               <small>NÚMERO DE PEDIDO</small>
-              <b>{pedido.orderNumber}</b>
+              <b>#{pedido.orderNumber}</b>
             </div>
             {pedido.items.map((linea) => {
               const detalle = [linea.size, linea.style, linea.option].filter(Boolean).join(" · ");
@@ -222,6 +245,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
                       <button
                         type="button"
                         aria-label="Agregar uno"
+                        disabled={linea.qty >= MAX_LINE_QUANTITY}
                         onClick={() => cart.increment(linea.key)}
                       >
                         +
@@ -280,6 +304,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
                 ref={refs.nombre}
                 type="text"
                 autoComplete="name"
+                maxLength={MAX_NAME_LENGTH}
                 placeholder="¿A nombre de quién?"
                 className={mal === "nombre" ? "mal" : undefined}
                 value={nombre}
@@ -297,6 +322,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel"
+                maxLength={MAX_PHONE_LENGTH}
                 placeholder="Para confirmarte el pedido"
                 className={mal === "telefono" ? "mal" : undefined}
                 value={telefono}
@@ -314,6 +340,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
                   ref={refs.direccion}
                   type="text"
                   autoComplete="street-address"
+                  maxLength={MAX_ADDRESS_LENGTH}
                   placeholder="Calle, número y una referencia"
                   className={mal === "direccion" ? "mal" : undefined}
                   value={direccion}
@@ -329,6 +356,7 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
               <textarea
                 id="f-nota"
                 rows={2}
+                maxLength={MAX_NOTE_LENGTH}
                 placeholder="Sin cebolla, mitad y mitad, bien dorada…"
                 value={nota}
                 onChange={(event) => setNota(event.target.value)}

@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { customersApi } from "../../api/customers";
-import { EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "../../components/ui";
+import { EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "@chesare/portal-shared";
 import { formatDateTime, formatMoney, formatNumber } from "../../lib/format";
 import { useActiveLocation, useLocationId } from "../../state/location";
 

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { menuApi } from "../../api/menu";
-import { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "../../components/ui";
+import { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "@chesare/portal-shared";
 import { slugify } from "../../lib/format";
 import { useLocationId } from "../../state/location";
 

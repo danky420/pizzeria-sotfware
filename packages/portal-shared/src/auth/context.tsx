@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { authApi, type MeResponse } from "../api/auth";
 import { ApiError, setUnauthorizedHandler } from "../api/client";
-import type { Location, SessionUser } from "../api/types";
+import type { Location, SessionUser } from "../types";
 
 export const ME_QUERY_KEY = ["auth", "me"] as const;
 

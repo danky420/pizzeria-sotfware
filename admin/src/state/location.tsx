@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { useAuth, type Location } from "@chesare/portal-shared";
 import { locationsApi } from "../api/locations";
-import type { Location } from "../api/types";
-import { useAuth } from "./auth";
 
 const STORAGE_KEY = "chesare.admin.locationId";
 

@@ -1,10 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { customersApi } from "../../api/customers";
-import { Badge, EmptyState, ErrorNotice, Loading, PageHeader, Panel } from "../../components/ui";
+import {
+  Badge,
+  EmptyState,
+  ErrorNotice,
+  FULFILLMENT_LABELS,
+  Loading,
+  ORDER_STATUS_LABELS,
+  orderStatusTone,
+  PageHeader,
+  Panel
+} from "@chesare/portal-shared";
 import { StatTile } from "../../components/charts";
 import { formatDateTime, formatMoney, formatNumber } from "../../lib/format";
-import { FULFILLMENT_LABELS, ORDER_STATUS_LABELS, orderStatusTone } from "../../lib/roles";
 import { useActiveLocation } from "../../state/location";
 
 export function CustomerDetailPage() {

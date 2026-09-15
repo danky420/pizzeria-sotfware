@@ -5,6 +5,7 @@
   "description": "Pizza's Chesa're — customer ordering site, backend API and admin portal",
   "workspaces": [
     "backend",
+    "packages/portal-shared",
     "admin",
     "customer"
   ],

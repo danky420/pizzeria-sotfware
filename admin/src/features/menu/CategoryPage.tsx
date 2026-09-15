@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { menuApi, type PriceMatrixCellInput } from "../../api/menu";
-import type { ItemType, MenuItem, OptionGroup, SizeOption, StyleOption } from "../../api/types";
 import {
   Badge,
   EmptyState,
@@ -11,9 +10,13 @@ import {
   Loading,
   PageHeader,
   Panel,
-  SuccessNotice,
-  Toggle
-} from "../../components/ui";
+  type ItemType,
+  type MenuItem,
+  type OptionGroup,
+  type SizeOption,
+  type StyleOption
+} from "@chesare/portal-shared";
+import { SuccessNotice, Toggle } from "../../components/ui";
 import { formatMoney, slugify } from "../../lib/format";
 import { useActiveLocation } from "../../state/location";
 

@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { Location, SessionUser } from "./types";
+import type { Location, SessionUser } from "../types";
 
 export interface MeResponse {
   user: SessionUser;

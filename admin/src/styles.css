@@ -349,6 +349,13 @@ code {
   background: var(--surface-2);
 }
 
+/* A link that acts as a button (the employee-app pointer) should read as one. */
+a.btn {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

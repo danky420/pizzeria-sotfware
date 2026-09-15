@@ -1,37 +1,6 @@
-export function formatMoney(value: number | null | undefined, currency = "MXN"): string {
-  if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2
-  }).format(value);
-}
-
-export function formatNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "—";
-  return new Intl.NumberFormat("es-MX").format(value);
-}
-
-export function formatDateTime(iso: string | null | undefined, timeZone?: string): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "short",
-    timeStyle: "short",
-    ...(timeZone ? { timeZone } : {})
-  }).format(date);
-}
-
-export function formatDate(iso: string | null | undefined, timeZone?: string): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("es-MX", {
-    dateStyle: "medium",
-    ...(timeZone ? { timeZone } : {})
-  }).format(date);
-}
+// The plain display formatters are shared with the employee app; they are
+// re-exported here so admin call sites keep one import for all formatting.
+export { formatDate, formatDateTime, formatMoney, formatNumber } from "@chesare/portal-shared";
 
 export function minutesToLabel(minutes: number | null): string {
   if (minutes === null) return "—";

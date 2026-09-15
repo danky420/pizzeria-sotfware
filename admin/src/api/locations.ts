@@ -1,5 +1,4 @@
-import { api } from "./client";
-import type { BusinessHoursDay, Location } from "./types";
+import { api, type BusinessHoursDay, type Location } from "@chesare/portal-shared";
 
 export interface LocationInput {
   slug: string;

@@ -1,8 +1,48 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "../state/auth";
+import { ErrorNotice, Loading, useAuth } from "@chesare/portal-shared";
+import { StaffAccountNotice } from "../features/auth/StaffAccountNotice";
 import { isBackOffice } from "../lib/roles";
-import { ErrorNotice, Loading } from "./ui";
 
+/**
+ * Wraps the whole app, above the router: a STAFF account must not reach any
+ * screen in here, whether it just signed in or arrived with a session already
+ * in the cookie jar. It is turned away and signed back out, so no half-usable
+ * admin session is left sitting in the browser.
+ *
+ * The API refuses STAFF on every non-orders route anyway (`requireRole`); this
+ * only decides what the wrong audience sees instead of a broken back office.
+ */
+export function StaffAccountGate({ children }: { children: ReactNode }) {
+  const { user, logout } = useAuth();
+  const [rejected, setRejected] = useState(false);
+
+  const isStaff = user !== null && !isBackOffice(user.role);
+
+  useEffect(() => {
+    if (!isStaff) return;
+    // Local state, not derived from `user`: the logout below clears the user,
+    // and the message has to outlive it.
+    setRejected(true);
+    void logout();
+  }, [isStaff, logout]);
+
+  if (rejected) {
+    return <StaffAccountNotice onBack={() => setRejected(false)} />;
+  }
+
+  // Render nothing for the frame between spotting the staff session and the
+  // effect running — otherwise the back office flashes on screen first.
+  if (isStaff) return null;
+
+  return <>{children}</>;
+}
+
+/**
+ * Everything past here is back office. Reaching any route in this app already
+ * implies an OWNER/MANAGER/SUPER_ADMIN session, since `StaffAccountGate` turns
+ * STAFF away at the door — the role check below is the belt to that braces.
+ */
 export function RequireAuth() {
   const { user, isLoading, error, refresh } = useAuth();
   const routerLocation = useLocation();
@@ -30,21 +70,9 @@ export function RequireAuth() {
     );
   }
 
-  if (!user) {
+  if (!user || !isBackOffice(user.role)) {
     return <Navigate to="/login" replace state={{ from: routerLocation.pathname }} />;
   }
 
-  return <Outlet />;
-}
-
-/**
- * UX only. STAFF is blocked from these routes by the API too (a real 403), so a
- * direct URL never becomes access — it just lands somewhere useful instead.
- */
-export function RequireBackOffice() {
-  const { user } = useAuth();
-  if (!isBackOffice(user?.role)) {
-    return <Navigate to="/orders" replace />;
-  }
   return <Outlet />;
 }

@@ -1,5 +1,4 @@
-import { api, query } from "./client";
-import type { DiscountType, Promotion, PromotionScope } from "./types";
+import { api, query, type DiscountType, type Promotion, type PromotionScope } from "@chesare/portal-shared";
 
 export interface PromotionInput {
   name: string;

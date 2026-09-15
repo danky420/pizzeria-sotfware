@@ -1,5 +1,5 @@
 import { type JSX, useState } from "react";
-import type { MenuCategory, MenuItem } from "../api/types";
+import { MAX_LINE_QUANTITY, type MenuCategory, type MenuItem } from "../api/types";
 import type { CartRef } from "../lib/cart";
 import { mx } from "../lib/format";
 import {
@@ -177,7 +177,12 @@ export function ProductSheet({ selection, onClose, onAdd }: Props): JSX.Element 
               −
             </button>
             <span>{qty}</span>
-            <button type="button" aria-label="Agregar uno" onClick={() => setQty((n) => n + 1)}>
+            <button
+              type="button"
+              aria-label="Agregar uno"
+              disabled={qty >= MAX_LINE_QUANTITY}
+              onClick={() => setQty((n) => Math.min(MAX_LINE_QUANTITY, n + 1))}
+            >
               +
             </button>
           </div>

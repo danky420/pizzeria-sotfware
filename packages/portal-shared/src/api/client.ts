@@ -49,9 +49,24 @@ export class ApiError extends Error {
   }
 }
 
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+/**
+ * Where the API lives. Empty (the default) means same-origin `/api/admin`,
+ * which is how production serves it — Fastify hosts the API and both SPAs.
+ *
+ * Each app configures it from its own `VITE_API_BASE_URL` at startup rather
+ * than this package reading `import.meta.env` itself: the literal has to stay
+ * in the consuming app for Vite's build-time replacement to see it, and that
+ * also keeps this package free of a Vite-specific type dependency.
+ */
+let baseUrl = "";
 
-export const ADMIN_PREFIX = `${BASE}/api/admin`;
+export function configureApiBaseUrl(url: string | undefined | null): void {
+  baseUrl = (url ?? "").replace(/\/+$/, "");
+}
+
+export function adminApiPrefix(): string {
+  return `${baseUrl}/api/admin`;
+}
 
 type UnauthorizedHandler = () => void;
 
@@ -78,7 +93,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   let response: Response;
 
   try {
-    response = await fetch(`${ADMIN_PREFIX}${path}`, {
+    response = await fetch(`${adminApiPrefix()}${path}`, {
       method,
       credentials: "include",
       headers: body === undefined ? {} : { "Content-Type": "application/json" },

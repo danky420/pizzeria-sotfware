@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { OrderLinePayload } from "../api/types";
+import { MAX_LINE_QUANTITY, type OrderLinePayload } from "../api/types";
 
 export interface CartRef {
   itemSlug: string;
@@ -21,6 +21,15 @@ export interface CartLine {
 
 function lineKey(nom: string, price: number, det: string): string {
   return `${nom}|${price}|${det}`;
+}
+
+/**
+ * The server rejects a line over MAX_LINE_QUANTITY with a VALIDATION_ERROR naming
+ * `items.N.quantity` — a field the customer never typed into. Clamping here keeps
+ * that error off the order path instead of translating it after the fact.
+ */
+function clampQty(quantity: number): number {
+  return Math.min(MAX_LINE_QUANTITY, Math.max(1, quantity));
 }
 
 export function toOrderLine(line: CartLine): OrderLinePayload {
@@ -55,10 +64,10 @@ export function useCart(): Cart {
         const existing = current.find((line) => line.key === key);
         if (existing) {
           return current.map((line) =>
-            line.key === key ? { ...line, qty: line.qty + qty } : line
+            line.key === key ? { ...line, qty: clampQty(line.qty + qty) } : line
           );
         }
-        return [...current, { key, nom, det, price, qty, ref }];
+        return [...current, { key, nom, det, price, qty: clampQty(qty), ref }];
       });
     },
     []
@@ -66,7 +75,7 @@ export function useCart(): Cart {
 
   const increment = useCallback((key: string) => {
     setLines((current) =>
-      current.map((line) => (line.key === key ? { ...line, qty: line.qty + 1 } : line))
+      current.map((line) => (line.key === key ? { ...line, qty: clampQty(line.qty + 1) } : line))
     );
   }, []);
 

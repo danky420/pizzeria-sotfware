@@ -1,5 +1,5 @@
 import { api, query } from "./client";
-import type { Order, OrderStatus, Pagination } from "./types";
+import type { Order, OrderStatus, Pagination } from "../types";
 
 export interface OrderListFilters {
   status?: OrderStatus | "";

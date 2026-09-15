@@ -1,12 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { usersApi, type CreateUserInput } from "../../api/users";
-import { ApiError } from "../../api/client";
-import type { AdminRole, AdminUser } from "../../api/types";
-import { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel, SuccessNotice, Toggle } from "../../components/ui";
+import {
+  ApiError,
+  Badge,
+  EmptyState,
+  ErrorNotice,
+  Field,
+  Loading,
+  PageHeader,
+  Panel,
+  useSessionUser,
+  type AdminRole,
+  type AdminUser
+} from "@chesare/portal-shared";
+import { SuccessNotice, Toggle } from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { ROLE_LABELS } from "../../lib/roles";
-import { useSessionUser } from "../../state/auth";
 import { useLocationId } from "../../state/location";
 
 const ASSIGNABLE_ROLES: AdminRole[] = ["STAFF", "MANAGER", "OWNER"];

@@ -1,17 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ordersApi } from "../../api/orders";
-import type { OrderStatus } from "../../api/types";
-import { Badge, EmptyState, ErrorNotice, Loading, PageHeader, Panel } from "../../components/ui";
-import { formatDateTime, formatMoney } from "../../lib/format";
 import {
+  Badge,
+  EmptyState,
+  ErrorNotice,
   FULFILLMENT_LABELS,
+  Loading,
+  ordersApi,
   ORDER_STATUS_FLOW,
   ORDER_STATUS_LABELS,
-  isBackOffice,
-  orderStatusTone
-} from "../../lib/roles";
-import { useAuth } from "../../state/auth";
+  orderStatusTone,
+  PageHeader,
+  Panel,
+  type OrderStatus
+} from "@chesare/portal-shared";
+import { formatDateTime, formatMoney } from "../../lib/format";
 import { useActiveLocation } from "../../state/location";
 
 export function OrderDetailPage() {
@@ -19,7 +22,6 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { location } = useActiveLocation();
-  const { user } = useAuth();
 
   const order = useQuery({
     queryKey: ["order", id],
@@ -125,7 +127,7 @@ export function OrderDetailPage() {
                 <div>{data.customerNote}</div>
               </div>
             ) : null}
-            {data.customerId && isBackOffice(user?.role) ? (
+            {data.customerId ? (
               <div>
                 <Link to={`/customers/${data.customerId}`}>Ver historial del cliente</Link>
               </div>

@@ -2,8 +2,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { menuApi } from "../../api/menu";
 import { promotionsApi, type PromotionInput } from "../../api/promotions";
-import type { DiscountType, Promotion, PromotionScope } from "../../api/types";
-import { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "../../components/ui";
+import {
+  Badge,
+  EmptyState,
+  ErrorNotice,
+  Field,
+  Loading,
+  PageHeader,
+  Panel,
+  type DiscountType,
+  type Promotion,
+  type PromotionScope
+} from "@chesare/portal-shared";
 import { formatDate, formatMoney, isoToLocalInput, localInputToIso } from "../../lib/format";
 import { useActiveLocation, useLocationId } from "../../state/location";
 

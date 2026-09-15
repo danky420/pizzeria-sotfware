@@ -1,11 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { authApi } from "../../api/auth";
-import { ApiError } from "../../api/client";
-import { useAuth } from "../../state/auth";
+import { ApiError, authApi, Field, Loading, useAuth } from "@chesare/portal-shared";
 import { homePathFor, isBackOffice } from "../../lib/roles";
-import { Field, Loading } from "../../components/ui";
 
 function lockMinutes(error: ApiError): number | null {
   const details = error.details as { retryAfterSeconds?: number } | undefined;
@@ -62,10 +59,12 @@ export function LoginPage() {
     mutationFn: () => authApi.login(email.trim(), password),
     onSuccess: async (response) => {
       await refresh();
+      // A STAFF account is turned away by StaffAccountGate the moment the
+      // refreshed session lands, so there is nowhere to send it — leave the
+      // navigation to the gate.
+      if (!isBackOffice(response.user.role)) return;
       const from = (routerLocation.state as { from?: string } | null)?.from;
-      const role = response.user.role;
-      const allowed = from && (isBackOffice(role) || from.startsWith("/orders"));
-      navigate(allowed ? from : homePathFor(role), { replace: true });
+      navigate(from ?? homePathFor(response.user.role), { replace: true });
     }
   });
 
@@ -77,7 +76,7 @@ export function LoginPage() {
     );
   }
 
-  if (user) {
+  if (user && isBackOffice(user.role)) {
     return <Navigate to={homePathFor(user.role)} replace />;
   }
 

@@ -1,16 +1,16 @@
-import { api } from "./client";
-import type {
-  ItemType,
-  MenuCategory,
-  MenuCategoryTree,
-  MenuItem,
-  OptionChoice,
-  OptionGroup,
-  PriceCell,
-  SelectionType,
-  SizeOption,
-  StyleOption
-} from "./types";
+import {
+  api,
+  type ItemType,
+  type MenuCategory,
+  type MenuCategoryTree,
+  type MenuItem,
+  type OptionChoice,
+  type OptionGroup,
+  type PriceCell,
+  type SelectionType,
+  type SizeOption,
+  type StyleOption
+} from "@chesare/portal-shared";
 
 export interface CategoryInput {
   slug: string;

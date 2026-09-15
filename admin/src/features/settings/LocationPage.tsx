@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { locationsApi, type LocationInput } from "../../api/locations";
-import { ErrorNotice, Field, Loading, PageHeader, Panel, SuccessNotice, Toggle } from "../../components/ui";
+import { ErrorNotice, Field, Loading, PageHeader, Panel } from "@chesare/portal-shared";
+import { SuccessNotice, Toggle } from "../../components/ui";
 import { useLocationId } from "../../state/location";
 
 const EMPTY_FORM: LocationInput = {

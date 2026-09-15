@@ -1,5 +1,4 @@
-import { api } from "./client";
-import type { AdminRole, AdminUser } from "./types";
+import { api, type AdminRole, type AdminUser } from "@chesare/portal-shared";
 
 export interface CreateUserInput {
   email: string;

@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useAuth } from "../state/auth";
+import { EmptyState, ErrorNotice, Loading, useAuth } from "@chesare/portal-shared";
 import { ActiveLocationProvider, useActiveLocation } from "../state/location";
-import { isBackOffice, ROLE_LABELS } from "../lib/roles";
-import { EmptyState, ErrorNotice, Loading } from "./ui";
+import { ROLE_LABELS } from "../lib/roles";
 
-const BACK_OFFICE_NAV = [
+// Only back-office roles reach this shell, so there is one nav. Staff get the
+// orders queue in the employee app instead.
+const NAV = [
   { to: "/", label: "Resumen", end: true },
   { to: "/orders", label: "Pedidos", end: false },
   { to: "/menu", label: "Menú", end: false },
@@ -15,12 +16,9 @@ const BACK_OFFICE_NAV = [
   { to: "/settings/location", label: "Sucursal", end: false }
 ];
 
-const STAFF_NAV = [{ to: "/orders", label: "Pedidos", end: false }];
-
 function Shell() {
   const { user, logout } = useAuth();
   const { location, locations, canSwitch, setLocationId, isLoading, error } = useActiveLocation();
-  const nav = isBackOffice(user?.role) ? BACK_OFFICE_NAV : STAFF_NAV;
 
   return (
     <div className="shell">
@@ -31,7 +29,7 @@ function Shell() {
         </div>
 
         <nav className="shell-nav">
-          {nav.map((item) => (
+          {NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

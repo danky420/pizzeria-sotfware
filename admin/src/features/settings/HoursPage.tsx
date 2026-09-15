@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { hoursApi } from "../../api/locations";
-import type { BusinessHoursDay } from "../../api/types";
-import { ErrorNotice, Loading, PageHeader, Panel, SuccessNotice } from "../../components/ui";
+import {
+  ErrorNotice,
+  Loading,
+  PageHeader,
+  Panel,
+  type BusinessHoursDay
+} from "@chesare/portal-shared";
+import { SuccessNotice } from "../../components/ui";
 import { minutesToLabel } from "../../lib/format";
 import { useLocationId } from "../../state/location";
 
