@@ -7,15 +7,18 @@
     "backend",
     "packages/portal-shared",
     "admin",
+    "employee",
     "customer"
   ],
   "scripts": {
     "dev:api": "npm run dev --workspace backend",
     "dev:admin": "npm run dev --workspace admin",
+    "dev:employee": "npm run dev --workspace employee",
     "dev:customer": "npm run dev --workspace customer",
     "build": "npm run build --workspaces --if-present",
     "build:api": "npm run build --workspace backend",
     "build:admin": "npm run build --workspace admin",
+    "build:employee": "npm run build --workspace employee",
     "build:customer": "npm run build --workspace customer",
     "start": "npm run start --workspace backend",
     "test": "npm run test --workspaces --if-present",
