@@ -37,6 +37,11 @@ export function presentLocation(location: Location) {
     waNumber: location.waNumber,
     timezone: location.timezone,
     currency: location.currency,
+    addressText: location.addressText,
+    colorScheme: location.colorScheme,
+    // Computed, not stored -- a stable, cacheable URL derived from whether a
+    // logo is set at all. See GET /api/public/locations/:slug/logo.
+    logoUrl: location.logoAssetId ? `/api/public/locations/${location.slug}/logo` : null,
     active: location.active
   };
 }

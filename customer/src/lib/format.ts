@@ -48,3 +48,18 @@ export const DIAS = [
 export function nombreDia(dayOfWeek: number): string {
   return DIAS[dayOfWeek] ?? "";
 }
+
+/**
+ * `Location.waNumber` is country code + number, digits only (e.g.
+ * "522722603537" — see backend/src/schemas/locations.ts). Formats the last 10
+ * digits as "272 260 3537", matching how the shop's printed menu writes it.
+ */
+export function formatPhone(waNumber: string): string {
+  const digits = waNumber.replace(/[^0-9]/g, "");
+  const local = digits.length > 10 ? digits.slice(-10) : digits;
+  return local.replace(/(\d{3})(\d{3})(\d+)/, "$1 $2 $3");
+}
+
+export function telHref(waNumber: string): string {
+  return `tel:+${waNumber.replace(/[^0-9]/g, "")}`;
+}

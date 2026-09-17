@@ -39,6 +39,13 @@ export interface Location {
   waNumber: string;
   timezone: string;
   currency: string;
+  addressText: string | null;
+  // One of backend/src/schemas/locations.ts's SUPPORTED_COLOR_SCHEMES. admin/
+  // and employee/ never apply this to their own chrome (that stays neutral for
+  // every tenant, by design) -- it rides along here only because LocationPage
+  // reads and writes it like every other Location field.
+  colorScheme: string;
+  logoUrl: string | null;
   active: boolean;
 }
 

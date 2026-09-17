@@ -28,6 +28,41 @@
   --sombra-hover:0 4px 10px rgba(0,0,0,.35), 0 14px 30px rgba(0,0,0,.3);
 }
 
+/* Multi-tenant color schemes (docs/multi-tenant-branding-plan.md). Only the
+   brand-accent tokens shift -- --rojo/--rojo-osc/--rojo-hondo/--amarillo, the
+   same 4 the dark-mode blocks above override. Every other token (--crema,
+   --papel, --tinta*, --linea, --verde*, all spacing/sizing) is untouched, and
+   none of icons.tsx's food-illustration colors are affected either: this is
+   content, not a redesign. "rojo-clasico" is the default and has no block of
+   its own -- the plain :root values above already are it.
+
+   Each scheme's dark variant applies the same lightness/saturation shift the
+   rojo-clasico dark block above applies (amarillo does not shift either, for
+   any scheme). */
+:root[data-scheme="verde-oliva"]{
+  --rojo:#3F7D42; --rojo-osc:#2C5930; --rojo-hondo:#1D3D20; --amarillo:#E8B33D;
+}
+@media (prefers-color-scheme: dark){
+  :root[data-scheme="verde-oliva"]:not([data-theme="light"]){
+    --rojo:#407243; --rojo-osc:#274B2A; --rojo-hondo:#18311B; --amarillo:#E8B33D;
+  }
+}
+:root[data-scheme="verde-oliva"][data-theme="dark"]{
+  --rojo:#407243; --rojo-osc:#274B2A; --rojo-hondo:#18311B; --amarillo:#E8B33D;
+}
+
+:root[data-scheme="azul-marino"]{
+  --rojo:#1F5C8B; --rojo-osc:#163F60; --rojo-hondo:#0E2A42; --amarillo:#F2A65A;
+}
+@media (prefers-color-scheme: dark){
+  :root[data-scheme="azul-marino"]:not([data-theme="light"]){
+    --rojo:#21557F; --rojo-osc:#133550; --rojo-hondo:#0C2133; --amarillo:#F2A65A;
+  }
+}
+:root[data-scheme="azul-marino"][data-theme="dark"]{
+  --rojo:#21557F; --rojo-osc:#133550; --rojo-hondo:#0C2133; --amarillo:#F2A65A;
+}
+
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} *{transition:none !important; animation:none !important} }

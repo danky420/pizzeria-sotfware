@@ -14,12 +14,21 @@ export const waNumberSchema = z
 export const SUPPORTED_CURRENCIES = ["MXN", "USD"] as const;
 export const currencySchema = z.enum(SUPPORTED_CURRENCIES);
 
+// The 3 preset storefront palettes a tenant can pick in admin/ -- see
+// docs/multi-tenant-branding-plan.md. A validated string, same pattern as
+// currency above: an enum column would need a migration every time a scheme
+// is added or renamed.
+export const SUPPORTED_COLOR_SCHEMES = ["rojo-clasico", "verde-oliva", "azul-marino"] as const;
+export const colorSchemeSchema = z.enum(SUPPORTED_COLOR_SCHEMES);
+
 export const createLocationBody = z.object({
   slug: slugSchema,
   name: nameSchema,
   waNumber: waNumberSchema,
   timezone: z.string().trim().min(1).max(64).default("America/Mexico_City"),
   currency: currencySchema.default("MXN"),
+  addressText: z.string().trim().max(300).optional(),
+  colorScheme: colorSchemeSchema.default("rojo-clasico"),
   active: z.boolean().default(true)
 });
 export type CreateLocationBody = z.infer<typeof createLocationBody>;

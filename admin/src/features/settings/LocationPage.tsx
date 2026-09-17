@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { locationsApi, type LocationInput } from "../../api/locations";
 import { ErrorNotice, Field, Loading, PageHeader, Panel } from "@chesare/portal-shared";
 import { SuccessNotice, Toggle } from "../../components/ui";
@@ -12,12 +12,26 @@ const CURRENCY_OPTIONS: { value: string; label: string }[] = [
   { value: "USD", label: "Dólar estadounidense (USD)" }
 ];
 
+// Mirrors backend/src/schemas/locations.ts's SUPPORTED_COLOR_SCHEMES. Only the
+// storefront (customer/) wears these -- admin/ and employee/ stay on their own
+// neutral palette for every tenant, by design (docs/multi-tenant-branding-plan.md).
+const COLOR_SCHEME_OPTIONS: { value: string; label: string; swatch: string }[] = [
+  { value: "rojo-clasico", label: "Rojo clásico", swatch: "#D22B27" },
+  { value: "verde-oliva", label: "Verde oliva", swatch: "#3F7D42" },
+  { value: "azul-marino", label: "Azul marino", swatch: "#1F5C8B" }
+];
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
 const EMPTY_FORM: LocationInput = {
   slug: "",
   name: "",
   waNumber: "",
   timezone: "America/Mexico_City",
   currency: "MXN",
+  addressText: "",
+  colorScheme: "rojo-clasico",
   active: true
 };
 
@@ -26,6 +40,8 @@ export function LocationPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<LocationInput>(EMPTY_FORM);
   const [notice, setNotice] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const locationQuery = useQuery({
     queryKey: ["location", locationId],
@@ -34,8 +50,8 @@ export function LocationPage() {
 
   useEffect(() => {
     if (!locationQuery.data) return;
-    const { slug, name, waNumber, timezone, currency, active } = locationQuery.data;
-    setForm({ slug, name, waNumber, timezone, currency, active });
+    const { slug, name, waNumber, timezone, currency, addressText, colorScheme, active } = locationQuery.data;
+    setForm({ slug, name, waNumber, timezone, currency, addressText: addressText ?? "", colorScheme, active });
   }, [locationQuery.data]);
 
   const updateMutation = useMutation({
@@ -47,10 +63,36 @@ export function LocationPage() {
     }
   });
 
+  const logoMutation = useMutation({
+    mutationFn: (file: File) => locationsApi.uploadLogo(locationId, file),
+    onSuccess: (response) => {
+      setLogoError(null);
+      queryClient.setQueryData(["location", locationId], response.location);
+      void queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+    }
+  });
+
   function submit(event: FormEvent) {
     event.preventDefault();
     setNotice(null);
     updateMutation.mutate(form);
+  }
+
+  function onLogoSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_LOGO_TYPES.has(file.type)) {
+      setLogoError("Formato no permitido. Usa PNG, JPEG o WEBP.");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError("La imagen pesa más de 2 MB.");
+      return;
+    }
+    setLogoError(null);
+    logoMutation.mutate(file);
   }
 
   return (
@@ -75,6 +117,12 @@ export function LocationPage() {
                 required
               />
             </Field>
+            <Field label="Dirección" hint="Como debe aparecer en el pie de página del sitio público.">
+              <input
+                value={form.addressText}
+                onChange={(event) => setForm((prev) => ({ ...prev, addressText: event.target.value }))}
+              />
+            </Field>
             <Field label="Zona horaria">
               <input
                 value={form.timezone}
@@ -95,6 +143,31 @@ export function LocationPage() {
                 ))}
               </select>
             </Field>
+            <Field
+              label="Colores del sitio público"
+              hint="Solo cambia el sitio de clientes; esta administración se ve igual con cualquier opción."
+            >
+              <div className="row color-scheme-picker" role="radiogroup" aria-label="Colores del sitio público">
+                {COLOR_SCHEME_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={
+                      form.colorScheme === option.value ? "color-scheme-option on" : "color-scheme-option"
+                    }
+                  >
+                    <input
+                      type="radio"
+                      name="colorScheme"
+                      value={option.value}
+                      checked={form.colorScheme === option.value}
+                      onChange={() => setForm((prev) => ({ ...prev, colorScheme: option.value }))}
+                    />
+                    <span className="color-scheme-swatch" style={{ background: option.swatch }} aria-hidden="true" />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </Field>
             <Toggle
               checked={form.active}
               onChange={(active) => setForm((prev) => ({ ...prev, active }))}
@@ -110,6 +183,31 @@ export function LocationPage() {
         {notice ? <SuccessNotice>{notice}</SuccessNotice> : null}
         {updateMutation.error ? <ErrorNotice error={updateMutation.error} /> : null}
       </Panel>
+
+      {locationQuery.data ? (
+        <Panel>
+          <Field label="Logo" hint="PNG, JPEG o WEBP, hasta 2 MB. Se usa en el sitio público y en esta administración.">
+            <div className="row logo-uploader">
+              {locationQuery.data.logoUrl ? (
+                <img className="logo-preview" src={locationQuery.data.logoUrl} alt="Logo actual" />
+              ) : (
+                <span className="muted">Sin logo todavía.</span>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={onLogoSelected}
+                disabled={logoMutation.isPending}
+              />
+            </div>
+          </Field>
+          {logoMutation.isPending ? <Loading label="Subiendo logo…" /> : null}
+          {logoError ? <ErrorNotice error={new Error(logoError)} /> : null}
+          {logoMutation.error ? <ErrorNotice error={logoMutation.error} /> : null}
+          {logoMutation.isSuccess && !logoMutation.isPending ? <SuccessNotice>Logo actualizado.</SuccessNotice> : null}
+        </Panel>
+      ) : null}
     </div>
   );
 }

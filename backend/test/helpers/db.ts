@@ -36,6 +36,7 @@ const TABLES = [
   "AdminSession",
   "AdminUser",
   "BusinessHours",
+  "LocationAsset",
   "Location"
 ];
 

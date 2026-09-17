@@ -88,7 +88,10 @@ export function LoginPage() {
   return (
     <div className="centered-screen">
       <form className="card login-card" onSubmit={onSubmit}>
-        <h1>Chesa're · Administración</h1>
+        {/* No session yet, so no tenant to name here -- see AppShell, which
+            shows the signed-in tenant's own name and logo once authenticated
+            (docs/multi-tenant-branding-plan.md). */}
+        <h1>Administración</h1>
         <p className="muted">Entra con tu cuenta del equipo.</p>
 
         <LoginError error={login.error} />

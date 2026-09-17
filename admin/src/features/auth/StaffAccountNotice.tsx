@@ -13,7 +13,10 @@ export function StaffAccountNotice({ onBack }: { onBack: () => void }) {
   return (
     <div className="centered-screen">
       <div className="card login-card">
-        <h1>Chesa're · Administración</h1>
+        {/* The session that would have named the tenant is already closed by
+            the time this renders (see StaffAccountGate) -- generic text here,
+            same as LoginPage. */}
+        <h1>Administración</h1>
 
         <div className="notice notice-error" role="alert">
           <strong>Tu cuenta es de tipo empleado</strong>

@@ -1,12 +1,16 @@
 import type {
   HoursResponse,
   MenuResponse,
+  PublicLocation,
   SubmitOrderPayload,
   SubmitOrderResponse,
   TrackOrderResponse
 } from "./types";
 
-export const LOCATION_SLUG = "chesare-maltrata";
+// One deployment per restaurant (docs/multi-tenant-branding-plan.md) -- this
+// build serves exactly one tenant, so the slug is a build-time env var, not a
+// runtime lookup. "chesare-maltrata" is the fallback for a build that never set it.
+export const LOCATION_SLUG = (import.meta.env.VITE_LOCATION_SLUG ?? "").trim() || "chesare-maltrata";
 
 const RAW_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
 
@@ -81,6 +85,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function fetchMenu(signal?: AbortSignal): Promise<MenuResponse> {
   return request<MenuResponse>("/menu", signal ? { signal } : undefined);
+}
+
+/** Just the location/branding, no menu -- what TrackingPage needs before (or
+ *  without) ever calling trackOrder. */
+export function fetchLocation(signal?: AbortSignal): Promise<{ location: PublicLocation }> {
+  return request<{ location: PublicLocation }>("", signal ? { signal } : undefined);
 }
 
 export function fetchHours(signal?: AbortSignal): Promise<HoursResponse> {
