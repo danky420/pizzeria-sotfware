@@ -15,6 +15,48 @@ function Svg({ children }: { children: ReactNode }): JSX.Element {
   );
 }
 
+/** A plain chevron, sized by its containing element — used wherever a row or
+ * button implies "tap to continue" (card rows, the floating cart button). */
+export function IcChevron({ size = 16 }: { size?: number }): JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** A small map pin, used next to the shop's address in the header. */
+export function IcPin({ size = 13 }: { size?: number }): JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 21s7-6.1 7-11.4A7 7 0 0 0 5 9.6C5 14.9 12 21 12 21z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="9.6" r="2.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** A cart glyph for the floating order button. */
+export function IcCarrito({ size = 22 }: { size?: number }): JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 4h2l2.4 12.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 8H6.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="10" cy="21" r="1.6" fill="currentColor" />
+      <circle cx="18" cy="21" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
 const PIZZA_TOPPING_SPOTS: [number, number][] = [
   [31, 17],
   [44, 24],
