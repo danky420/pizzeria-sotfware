@@ -5,7 +5,7 @@ import { CartSheet, type Sugerencia } from "./components/CartSheet";
 import { MenuSections } from "./components/MenuSections";
 import { ProductSheet, type ProductSelection } from "./components/ProductSheet";
 import { useCart } from "./lib/cart";
-import { hhmm, mx, nombreDia } from "./lib/format";
+import { configureCurrency, hhmm, mx, nombreDia } from "./lib/format";
 import { shopStatus } from "./lib/hours";
 import { buildSections, cartName, choicePrice, singleChoiceGroup } from "./lib/menu";
 
@@ -53,6 +53,7 @@ export function App(): JSX.Element {
 
     Promise.all([fetchMenu(control.signal), fetchHours(control.signal)])
       .then(([menuResponse, hoursResponse]) => {
+        configureCurrency(menuResponse.location.currency);
         setMenu(menuResponse);
         setHours(hoursResponse);
         setCargando(false);
