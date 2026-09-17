@@ -48,8 +48,13 @@ describe.skipIf(!databaseReady)("admin customers and analytics", () => {
     ownerB = await login(app, "owner@b.test");
     staffA = await login(app, "staff@a.test");
 
-    // Ana: 2 × 180 + 1 × 30 = 390, and 1 × 180 = 180.
-    await submitOrder(ana, [pizzaLine(2), refrescoLine(1)]);
+    // Ana: 2 × 180 + 1 × 30 = 390, and 1 × 180 = 180. The one-open-order-per-
+    // customer constraint (docs/order-abuse-prevention.md) means the first
+    // has to be closed out before the second can be submitted; neither
+    // analytics nor order-history assertions below care which status a
+    // counted (non-cancelled) order ends up in.
+    const anaFirst = await submitOrder(ana, [pizzaLine(2), refrescoLine(1)]);
+    await prisma.order.update({ where: { id: anaFirst.id }, data: { status: "COMPLETED" } });
     await submitOrder(ana, [pizzaLine(1)]);
     // Beto: 3 × 30 = 90, then cancelled — must not count towards revenue.
     const cancelled = await submitOrder(beto, [refrescoLine(3)]);

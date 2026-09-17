@@ -19,10 +19,19 @@ describe.skipIf(!databaseReady)("public API", () => {
     await disconnectPrisma();
   });
 
-  const submit = (payload: Record<string, unknown>, slug = "chesare-test") =>
-    app.inject({ method: "POST", url: `/api/public/locations/${slug}/orders`, payload });
+  const submit = (payload: Record<string, unknown>, slug = "chesare-test", remoteAddress?: string) =>
+    app.inject({ method: "POST", url: `/api/public/locations/${slug}/orders`, payload, remoteAddress });
 
-  const customer = { name: "Ana", phone: "272 260 3537", address: "Calle 5 #12" };
+  // Every test below gets its own phone number: the new one-open-order-per-
+  // customer constraint (see docs/order-abuse-prevention.md) means two
+  // successful submits for the *same* phone would otherwise collide across
+  // unrelated tests. Tests that specifically exercise same-phone reuse build
+  // their own customer object and complete the prior order first.
+  let phoneSeq = 0;
+  function freshCustomer(overrides: Partial<{ name: string; phone: string; address: string }> = {}) {
+    phoneSeq += 1;
+    return { name: "Ana", phone: `27210${String(phoneSeq).padStart(5, "0")}`, address: "Calle 5 #12", ...overrides };
+  }
 
   describe("menu and hours", () => {
     it("serves the menu with matrix cells and null prices intact", async () => {
@@ -56,9 +65,10 @@ describe.skipIf(!databaseReady)("public API", () => {
 
   describe("order submit", () => {
     it("prices the order from the database and returns a confirmation", async () => {
+      const cust = freshCustomer();
       const response = await submit({
         fulfillmentType: "DELIVERY",
-        customer,
+        customer: cust,
         items: [
           { menuItemId: fixture.pizzaId, sizeSlug: "grande", styleSlug: "tradicional", quantity: 2 },
           { itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }
@@ -75,7 +85,7 @@ describe.skipIf(!databaseReady)("public API", () => {
       expect(order.total).toBe(390);
       expect(order.fulfillmentType).toBe("DELIVERY");
       expect(order.status).toBe("PENDING");
-      expect(order.customerPhone).toBe("272 260 3537");
+      expect(order.customerPhone).toBe(cust.phone);
       expect(order.items).toHaveLength(2);
 
       const pizzaLine = order.items.find((line: { name: string }) => line.name === "Al pastor");
@@ -92,7 +102,7 @@ describe.skipIf(!databaseReady)("public API", () => {
 
     it("ignores any price the client tries to send", async () => {
       const response = await submit({
-        customer,
+        customer: freshCustomer(),
         items: [
           {
             itemSlug: "refresco",
@@ -112,7 +122,7 @@ describe.skipIf(!databaseReady)("public API", () => {
     it("refuses a line whose matrix cell has no price", async () => {
       const before = await prisma.order.count();
       const response = await submit({
-        customer,
+        customer: freshCustomer(),
         items: [{ menuItemId: fixture.pizzaId, sizeSlug: "grande", styleSlug: "rellena", quantity: 1 }]
       });
 
@@ -123,7 +133,7 @@ describe.skipIf(!databaseReady)("public API", () => {
 
     it("refuses an item whose flat price is null", async () => {
       const response = await submit({
-        customer,
+        customer: freshCustomer(),
         items: [{ menuItemId: fixture.aguaId, quantity: 1 }]
       });
 
@@ -142,11 +152,11 @@ describe.skipIf(!databaseReady)("public API", () => {
     });
 
     it("rejects an empty cart and an oversized one", async () => {
-      const empty = await submit({ customer, items: [] });
+      const empty = await submit({ customer: freshCustomer(), items: [] });
       expect(empty.statusCode).toBe(400);
 
       const huge = await submit({
-        customer,
+        customer: freshCustomer(),
         items: Array.from({ length: 41 }, () => ({
           itemSlug: "refresco",
           categorySlug: "bebidas",
@@ -158,13 +168,13 @@ describe.skipIf(!databaseReady)("public API", () => {
 
     it("rejects an absurd quantity and an overlong note", async () => {
       const quantity = await submit({
-        customer,
+        customer: freshCustomer(),
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 999 }]
       });
       expect(quantity.statusCode).toBe(400);
 
       const note = await submit({
-        customer: { ...customer, note: "x".repeat(501) },
+        customer: { ...freshCustomer(), note: "x".repeat(501) },
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
       });
       expect(note.statusCode).toBe(400);
@@ -172,7 +182,7 @@ describe.skipIf(!databaseReady)("public API", () => {
 
     it("refuses an item from another location", async () => {
       const response = await submit(
-        { customer, items: [{ menuItemId: fixture.refrescoId, quantity: 1 }] },
+        { customer: freshCustomer(), items: [{ menuItemId: fixture.refrescoId, quantity: 1 }] },
         "otra-test"
       );
       expect(response.statusCode).toBe(400);
@@ -180,7 +190,7 @@ describe.skipIf(!databaseReady)("public API", () => {
 
     it("applies a valid promotion code and rejects an unknown one", async () => {
       const discounted = await submit({
-        customer,
+        customer: freshCustomer(),
         promotionCode: "DIEZ",
         items: [{ menuItemId: fixture.pizzaId, sizeSlug: "grande", styleSlug: "tradicional", quantity: 2 }]
       });
@@ -192,7 +202,7 @@ describe.skipIf(!databaseReady)("public API", () => {
       expect(discounted.json().order.promotionId).toBe(fixture.promotionId);
 
       const unknown = await submit({
-        customer,
+        customer: freshCustomer(),
         promotionCode: "NOPE",
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
       });
@@ -201,10 +211,13 @@ describe.skipIf(!databaseReady)("public API", () => {
 
     it("reuses one customer record per phone number", async () => {
       const phone = "2721111111";
-      await submit({
+      const first = await submit({
         customer: { name: "Beto", phone },
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
       });
+      // The one-open-order-per-customer constraint would otherwise refuse this
+      // second submit outright -- completing the first is what frees the slot.
+      await prisma.order.update({ where: { id: first.json().order.id }, data: { status: "COMPLETED" } });
       await submit({
         customer: { name: "Beto", phone: `(272) 111-1111` },
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
@@ -219,12 +232,14 @@ describe.skipIf(!databaseReady)("public API", () => {
     });
 
     it("gives consecutive orders different numbers", async () => {
+      const cust = freshCustomer();
       const first = await submit({
-        customer,
+        customer: cust,
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
       });
+      await prisma.order.update({ where: { id: first.json().order.id }, data: { status: "COMPLETED" } });
       const second = await submit({
-        customer,
+        customer: cust,
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
       });
 
@@ -234,13 +249,119 @@ describe.skipIf(!databaseReady)("public API", () => {
     it("refuses an item the shop has switched off", async () => {
       await prisma.menuItem.update({ where: { id: fixture.refrescoId }, data: { available: false } });
       const response = await submit({
-        customer,
+        customer: freshCustomer(),
         items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
       });
       await prisma.menuItem.update({ where: { id: fixture.refrescoId }, data: { available: true } });
 
       expect(response.statusCode).toBe(422);
       expect(response.json().error.code).toBe("ITEM_UNORDERABLE");
+    });
+  });
+
+  describe("one open order per phone", () => {
+    // Its own fake source IP: publicOrderRateLimit's 20-per-10-minutes cap is
+    // shared per IP across every submit() call in this file, and this block's
+    // handful of legitimate repeat submits would otherwise eat into the
+    // "order submit" describe's budget above (and vice versa).
+    const submitAsNewIp = (() => {
+      let n = 0;
+      return (payload: Record<string, unknown>) => {
+        n += 1;
+        return submit(payload, "chesare-test", `10.10.${Math.floor(n / 255)}.${n % 255}`);
+      };
+    })();
+
+    it("refuses a second order while the first is still open", async () => {
+      const cust = freshCustomer();
+      const first = await submitAsNewIp({
+        customer: cust,
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      expect(first.statusCode).toBe(201);
+
+      const second = await submitAsNewIp({
+        customer: cust,
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      expect(second.statusCode).toBe(409);
+      expect(second.json().error.code).toBe("CONFLICT");
+
+      expect(await prisma.order.count({ where: { customerId: first.json().order.customerId } })).toBe(1);
+    });
+
+    it("blocks a repeat order regardless of how the phone is formatted", async () => {
+      const cust = freshCustomer();
+      await submitAsNewIp({ customer: cust, items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }] });
+
+      const differentlyFormatted = await submitAsNewIp({
+        customer: { ...cust, phone: `(${cust.phone.slice(0, 3)}) ${cust.phone.slice(3)}` },
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      expect(differentlyFormatted.statusCode).toBe(409);
+    });
+
+    it("allows a new order once the previous one is completed", async () => {
+      const cust = freshCustomer();
+      const first = await submitAsNewIp({
+        customer: cust,
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      await prisma.order.update({ where: { id: first.json().order.id }, data: { status: "COMPLETED" } });
+
+      const second = await submitAsNewIp({
+        customer: cust,
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      expect(second.statusCode).toBe(201);
+    });
+
+    it("allows a new order once the previous one is cancelled", async () => {
+      const cust = freshCustomer();
+      const first = await submitAsNewIp({
+        customer: cust,
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      await prisma.order.update({ where: { id: first.json().order.id }, data: { status: "CANCELLED" } });
+
+      const second = await submitAsNewIp({
+        customer: cust,
+        items: [{ itemSlug: "refresco", categorySlug: "bebidas", quantity: 1 }]
+      });
+      expect(second.statusCode).toBe(201);
+    });
+
+    // Exercises the DB constraint directly rather than through submit(): the
+    // fixture's second location has no menu of its own, so this can't go
+    // through a real order-submit call. The constraint is on Order.customerId,
+    // and Customer is already scoped by (locationId, phone), so the same
+    // phone digits at two locations are two different customers -- each gets
+    // its own open-order slot.
+    it("scopes the open-order limit per customer, so the same phone at another location is unaffected", async () => {
+      const phone = "2721119999";
+      const customerA = await prisma.customer.create({ data: { locationId: fixture.locationA.id, phone } });
+      const customerB = await prisma.customer.create({ data: { locationId: fixture.locationB.id, phone } });
+
+      await prisma.order.create({
+        data: {
+          locationId: fixture.locationA.id,
+          customerId: customerA.id,
+          customerPhone: phone,
+          subtotal: 30,
+          total: 30
+        }
+      });
+      await expect(
+        prisma.order.create({
+          data: {
+            locationId: fixture.locationB.id,
+            customerId: customerB.id,
+            customerPhone: phone,
+            subtotal: 30,
+            total: 30
+          }
+        })
+      ).resolves.toBeTruthy();
     });
   });
 

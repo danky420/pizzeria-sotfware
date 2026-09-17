@@ -49,6 +49,11 @@ const ERRORES: Record<string, string> = {
     "Uno de los productos no tiene precio publicado. Quítalo del pedido o pregúntanos por WhatsApp.",
   ITEM_UNORDERABLE:
     "Uno de los productos ya no está disponible. Quítalo del pedido e inténtalo de nuevo.",
+  // Anti-abuse: one open order per phone number at a time (see
+  // docs/order-abuse-prevention.md) — the server enforces it, this is just the
+  // customer-facing translation of that 409.
+  CONFLICT:
+    "Ya tienes un pedido en curso. Espera a que esté listo, o llámanos si necesitas cambiarlo.",
   RATE_LIMITED: "Estamos recibiendo muchos pedidos. Espera un minuto y vuelve a intentar.",
   NOT_FOUND: "No pudimos encontrar la pizzería en el sistema. Llámanos para tomar tu pedido.",
   NETWORK_ERROR:

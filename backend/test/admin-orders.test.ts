@@ -19,13 +19,16 @@ describe.skipIf(!databaseReady)("admin orders", () => {
 
   const customer = { name: "Ana Robles", phone: "272 260 3537", address: "Calle 5 #12" };
 
-  async function submitOrder(overrides: Record<string, unknown> = {}): Promise<string> {
+  async function submitOrder(
+    who: { name: string; phone: string; address: string },
+    overrides: Record<string, unknown> = {}
+  ): Promise<string> {
     const response = await app.inject({
       method: "POST",
       url: `/api/public/locations/${fixture.locationA.slug}/orders`,
       payload: {
         fulfillmentType: "DELIVERY",
-        customer,
+        customer: who,
         items: [
           {
             menuItemId: fixture.pizzaId,
@@ -50,7 +53,16 @@ describe.skipIf(!databaseReady)("admin orders", () => {
     ownerB = await login(app, "owner@b.test");
     staffA = await login(app, "staff@a.test");
 
-    orderIds = [await submitOrder(), await submitOrder(), await submitOrder()];
+    // Three different customers, not three orders on one: the one-open-order-
+    // per-customer constraint (docs/order-abuse-prevention.md) means a single
+    // customer can't hold 3 concurrently-open orders any more. The listing
+    // tests below only need 3 orders to exist at this location; "filters by
+    // customer" is the one that cares which customer each belongs to.
+    orderIds = [
+      await submitOrder(customer),
+      await submitOrder({ name: "Beto Ruiz", phone: "2722603538", address: "Calle 6 #1" }),
+      await submitOrder({ name: "Cami Soto", phone: "2722603539", address: "Calle 7 #2" })
+    ];
   });
 
   afterAll(async () => {
@@ -102,12 +114,14 @@ describe.skipIf(!databaseReady)("admin orders", () => {
     });
 
     it("filters by customer", async () => {
-      const customerRow = await prisma.customer.findFirstOrThrow({ where: { locationId: fixture.locationA.id } });
+      const customerRow = await prisma.customer.findFirstOrThrow({
+        where: { locationId: fixture.locationA.id, phone: "2722603537" }
+      });
       const mine = await get(
         `/api/admin/locations/${fixture.locationA.id}/orders?customerId=${customerRow.id}`,
         ownerA
       );
-      expect(mine.json().orders).toHaveLength(3);
+      expect(mine.json().orders).toHaveLength(1);
 
       const other = await get(
         `/api/admin/locations/${fixture.locationA.id}/orders?customerId=no-such-customer`,
