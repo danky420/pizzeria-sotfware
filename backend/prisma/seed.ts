@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type AdminRole, PrismaClient } from "@prisma/client";
@@ -35,8 +36,18 @@ const LOCATION = {
   name: "Pizza's Chesa're",
   waNumber: "522722603537",
   timezone: "America/Mexico_City",
-  currency: "MXN"
+  currency: "MXN",
+  // Today's exact footer text (customer/src/App.tsx) -- multi-tenant branding's
+  // migration backfill, see docs/multi-tenant-branding-plan.md.
+  addressText: "Av. Ignacio Zaragoza S/N, Manzana 1, 94700 Maltrata, Veracruz",
+  colorScheme: "rojo-clasico"
 };
+
+// The same crop shipped as a static file to all three frontends today. Seeding
+// its bytes as a LocationAsset makes GET .../logo serve pixel-identical output
+// to what /marca.webp serves now -- a zero-visual-diff backfill, not a new logo.
+const LOGO_PATH = resolve(backendRoot, "..", "customer", "public", "marca.webp");
+const LOGO_MIME_TYPE = "image/webp";
 
 /* ============ menu data, transcribed from the shop's printed menu ============ */
 
@@ -312,9 +323,34 @@ async function upsertAdminUser(spec: {
 async function main(): Promise<void> {
   const location = await prisma.location.upsert({
     where: { slug: LOCATION.slug },
-    update: { name: LOCATION.name, waNumber: LOCATION.waNumber, timezone: LOCATION.timezone, currency: LOCATION.currency },
+    update: {
+      name: LOCATION.name,
+      waNumber: LOCATION.waNumber,
+      timezone: LOCATION.timezone,
+      currency: LOCATION.currency,
+      addressText: LOCATION.addressText,
+      colorScheme: LOCATION.colorScheme
+    },
     create: { ...LOCATION, active: true }
   });
+
+  // Backfill the logo once -- re-running the seed must not create a fresh
+  // LocationAsset row (and orphan the old one) every time.
+  if (!location.logoAssetId) {
+    const logoBytes = readFileSync(LOGO_PATH);
+    const logoAsset = await prisma.locationAsset.create({
+      data: {
+        locationId: location.id,
+        mimeType: LOGO_MIME_TYPE,
+        data: Uint8Array.from(logoBytes),
+        size: logoBytes.length
+      }
+    });
+    await prisma.location.update({
+      where: { id: location.id },
+      data: { logoAssetId: logoAsset.id }
+    });
+  }
 
   for (const [dayOfWeek, day] of HORAS.entries()) {
     const hours = { opensAt: toMinutes(day.a), closesAt: toMinutes(day.c) };
