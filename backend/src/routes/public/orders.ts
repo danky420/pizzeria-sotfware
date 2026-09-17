@@ -1,8 +1,8 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { publicOrderRateLimit, publicTrackRateLimit } from "../../auth/rateLimit.js";
 import { prisma } from "../../db/prisma.js";
-import { badRequest, notFound, unprocessable } from "../../lib/http-error.js";
+import { badRequest, conflict, notFound, unprocessable } from "../../lib/http-error.js";
 import { ZERO, money, sum } from "../../lib/money.js";
 import { presentLocation, presentOrder, presentOrderTracking } from "../../lib/present.js";
 import { loadPublicLocation } from "../../lib/scope.js";
@@ -112,62 +112,76 @@ export default async function publicOrderRoutes(app: FastifyInstance): Promise<v
       throw badRequest("Enter a phone number staff can call you back on");
     }
 
-    const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const customer = await tx.customer.upsert({
-        where: { locationId_phone: { locationId: location.id, phone: phoneKey } },
-        create: {
-          locationId: location.id,
-          phone: phoneKey,
-          name: body.customer.name ?? null,
-          addressText: body.customer.address ?? null
-        },
-        update: {
-          ...(body.customer.name ? { name: body.customer.name } : {}),
-          ...(body.customer.address ? { addressText: body.customer.address } : {})
-        }
-      });
-
-      const created = await tx.order.create({
-        data: {
-          locationId: location.id,
-          customerId: customer.id,
-          fulfillmentType: body.fulfillmentType,
-          customerName: body.customer.name ?? null,
-          customerPhone: body.customer.phone,
-          customerAddress: body.customer.address ?? null,
-          customerNote: body.customer.note ?? null,
-          subtotal,
-          discountTotal,
-          total,
-          promotionId: best?.promotion.id ?? null,
-          items: {
-            create: lines.map((line) => ({
-              menuItemId: line.menuItemId,
-              nameSnapshot: line.nameSnapshot,
-              sizeSnapshot: line.sizeSnapshot,
-              styleSnapshot: line.styleSnapshot,
-              optionSnapshot: line.optionSnapshot,
-              notes: line.notes,
-              unitPrice: line.unitPrice,
-              quantity: line.quantity,
-              lineTotal: line.lineTotal
-            }))
+    let order;
+    try {
+      order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const customer = await tx.customer.upsert({
+          where: { locationId_phone: { locationId: location.id, phone: phoneKey } },
+          create: {
+            locationId: location.id,
+            phone: phoneKey,
+            name: body.customer.name ?? null,
+            addressText: body.customer.address ?? null
+          },
+          update: {
+            ...(body.customer.name ? { name: body.customer.name } : {}),
+            ...(body.customer.address ? { addressText: body.customer.address } : {})
           }
-        },
-        include: { items: true }
-      });
+        });
 
-      await tx.customer.update({
-        where: { id: customer.id },
-        data: {
-          orderCount: { increment: 1 },
-          totalSpent: { increment: total },
-          lastOrderAt: created.createdAt
-        }
-      });
+        const created = await tx.order.create({
+          data: {
+            locationId: location.id,
+            customerId: customer.id,
+            fulfillmentType: body.fulfillmentType,
+            customerName: body.customer.name ?? null,
+            customerPhone: body.customer.phone,
+            customerAddress: body.customer.address ?? null,
+            customerNote: body.customer.note ?? null,
+            subtotal,
+            discountTotal,
+            total,
+            promotionId: best?.promotion.id ?? null,
+            items: {
+              create: lines.map((line) => ({
+                menuItemId: line.menuItemId,
+                nameSnapshot: line.nameSnapshot,
+                sizeSnapshot: line.sizeSnapshot,
+                styleSnapshot: line.styleSnapshot,
+                optionSnapshot: line.optionSnapshot,
+                notes: line.notes,
+                unitPrice: line.unitPrice,
+                quantity: line.quantity,
+                lineTotal: line.lineTotal
+              }))
+            }
+          },
+          include: { items: true }
+        });
 
-      return created;
-    });
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: {
+            orderCount: { increment: 1 },
+            totalSpent: { increment: total },
+            lastOrderAt: created.createdAt
+          }
+        });
+
+        return created;
+      });
+    } catch (error) {
+      // Race-free version of "one open order per phone": rather than check
+      // then insert (two concurrent submits could both pass the check before
+      // either commits), the DB enforces it via a partial unique index
+      // (Order_one_open_per_customer) and this catches the violation.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw conflict(
+          "You already have an order in progress. Wait until it's ready, or call us if you need to change it."
+        );
+      }
+      throw error;
+    }
 
     return reply.status(201).send({
       order: presentOrder(order),
