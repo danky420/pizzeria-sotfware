@@ -39,6 +39,20 @@ export const publicOrderRateLimit: RateLimitRouteConfig = {
   }
 };
 
+/**
+ * Order-tracking lookup is read-only but still unauthenticated and takes a
+ * phone number, so it gets its own cap: generous enough for one customer
+ * polling an open tracking tab every few seconds, tight enough that grinding
+ * through order numbers against a guessed phone is slow.
+ */
+export const publicTrackRateLimit: RateLimitRouteConfig = {
+  rateLimit: {
+    max: 60,
+    timeWindow: "10 minutes",
+    keyGenerator: (request: FastifyRequest) => `track:${request.ip}`
+  }
+};
+
 export function isLocked(user: Pick<AdminUser, "lockedUntil">): boolean {
   return user.lockedUntil !== null && user.lockedUntil.getTime() > Date.now();
 }

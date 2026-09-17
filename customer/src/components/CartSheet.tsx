@@ -217,6 +217,12 @@ export function CartSheet({ cart, open, apiReady, sugerencias, onClose }: Props)
             {pedido.customerPhone ? (
               <p className="ok-nota">Si hace falta algo te marcamos al {pedido.customerPhone}.</p>
             ) : null}
+            <a
+              className="btn btn-outline rastreo-link"
+              href={`/rastreo?telefono=${encodeURIComponent(pedido.customerPhone ?? "")}&pedido=${pedido.orderNumber}`}
+            >
+              Rastrea tu pedido
+            </a>
           </div>
         ) : (
           <div>

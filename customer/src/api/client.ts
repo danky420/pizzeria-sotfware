@@ -1,4 +1,10 @@
-import type { HoursResponse, MenuResponse, SubmitOrderPayload, SubmitOrderResponse } from "./types";
+import type {
+  HoursResponse,
+  MenuResponse,
+  SubmitOrderPayload,
+  SubmitOrderResponse,
+  TrackOrderResponse
+} from "./types";
 
 export const LOCATION_SLUG = "chesare-maltrata";
 
@@ -87,4 +93,13 @@ export function submitOrder(body: SubmitOrderPayload): Promise<SubmitOrderRespon
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
+}
+
+export function trackOrder(
+  phone: string,
+  orderNumber: number,
+  signal?: AbortSignal
+): Promise<TrackOrderResponse> {
+  const params = new URLSearchParams({ phone, orderNumber: String(orderNumber) });
+  return request<TrackOrderResponse>(`/orders/track?${params.toString()}`, signal ? { signal } : undefined);
 }

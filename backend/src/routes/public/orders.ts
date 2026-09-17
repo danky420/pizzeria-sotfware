@@ -1,12 +1,12 @@
 import type { Prisma } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
-import { publicOrderRateLimit } from "../../auth/rateLimit.js";
+import { publicOrderRateLimit, publicTrackRateLimit } from "../../auth/rateLimit.js";
 import { prisma } from "../../db/prisma.js";
-import { badRequest, unprocessable } from "../../lib/http-error.js";
+import { badRequest, notFound, unprocessable } from "../../lib/http-error.js";
 import { ZERO, money, sum } from "../../lib/money.js";
-import { presentLocation, presentOrder } from "../../lib/present.js";
+import { presentLocation, presentOrder, presentOrderTracking } from "../../lib/present.js";
 import { loadPublicLocation } from "../../lib/scope.js";
-import { type SubmitOrderLine, slugParams, submitOrderBody } from "../../schemas/index.js";
+import { type SubmitOrderLine, slugParams, submitOrderBody, trackOrderQuery } from "../../schemas/index.js";
 import { type PriceableItem, priceableItemInclude, resolvePrice } from "../../services/pricing.js";
 import { applyDiscount, selectBestPromotion } from "../../services/promotions.js";
 
@@ -173,5 +173,37 @@ export default async function publicOrderRoutes(app: FastifyInstance): Promise<v
       order: presentOrder(order),
       location: presentLocation(location)
     });
+  });
+
+  app.get("/locations/:slug/orders/track", { config: publicTrackRateLimit }, async (request, reply) => {
+    const { slug } = slugParams.parse(request.params);
+    const query = trackOrderQuery.parse(request.query);
+    const location = await loadPublicLocation(slug);
+
+    // Same normalization submit uses (see phoneKey above): match on the
+    // Customer record, not a raw string compare against Order.customerPhone,
+    // which keeps whatever formatting the customer happened to type that time.
+    const phoneKey = query.phone.replace(/[^0-9]/g, "");
+
+    const customer = await prisma.customer.findUnique({
+      where: { locationId_phone: { locationId: location.id, phone: phoneKey } }
+    });
+
+    // One generic error for "wrong phone", "wrong order number", and "real
+    // phone paired with someone else's order" alike -- distinguishing them
+    // would let a caller confirm a phone number belongs to a customer here
+    // without also knowing one of their order numbers.
+    const order = customer
+      ? await prisma.order.findFirst({
+          where: { locationId: location.id, customerId: customer.id, orderNumber: query.orderNumber },
+          include: { items: true }
+        })
+      : null;
+
+    if (!order) throw notFound("Order not found");
+
+    // Same location shape submitOrder already returns publicly (via /menu and
+    // /hours too) -- the tracking page needs it for the shop's currency.
+    return reply.send({ order: presentOrderTracking(order), location: presentLocation(location) });
   });
 }

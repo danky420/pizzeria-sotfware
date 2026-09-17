@@ -232,6 +232,30 @@ export function presentOrderItem(item: OrderItem) {
   };
 }
 
+/**
+ * Public order-tracking response: a customer already proved they know the
+ * phone number and order number, but that's still no reason to hand back
+ * the delivery address or note text on a second unauthenticated surface —
+ * see docs/order-tracking-plan.md.
+ */
+export function presentOrderTracking(order: Order & { items?: OrderItem[] }) {
+  return {
+    orderNumber: order.orderNumber,
+    status: order.status,
+    fulfillmentType: order.fulfillmentType,
+    createdAt: order.createdAt,
+    customerName: order.customerName,
+    total: decimalToNumber(order.total),
+    items: (order.items ?? []).map((item) => ({
+      name: item.nameSnapshot,
+      size: item.sizeSnapshot,
+      style: item.styleSnapshot,
+      option: item.optionSnapshot,
+      quantity: item.quantity
+    }))
+  };
+}
+
 export function presentOrder(order: Order & { items?: OrderItem[] }) {
   return {
     id: order.id,

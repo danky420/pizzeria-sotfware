@@ -183,3 +183,29 @@ export interface SubmitOrderResponse {
   order: PlacedOrder;
   location: PublicLocation;
 }
+
+export interface OrderTrackingItem {
+  name: string;
+  size: string | null;
+  style: string | null;
+  option: string | null;
+  quantity: number;
+}
+
+/** Mirrors `presentOrderTracking()` in `backend/src/lib/present.ts` — narrower
+ *  than `PlacedOrder`: no address, phone, note or ids on this second,
+ *  unauthenticated surface. */
+export interface OrderTracking {
+  orderNumber: number;
+  status: OrderStatus;
+  fulfillmentType: FulfillmentType;
+  createdAt: string;
+  customerName: string | null;
+  total: number;
+  items: OrderTrackingItem[];
+}
+
+export interface TrackOrderResponse {
+  order: OrderTracking;
+  location: PublicLocation;
+}

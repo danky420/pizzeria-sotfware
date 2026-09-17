@@ -95,6 +95,8 @@ img{max-width:100%; display:block}
 .btn:active{transform:scale(.97)}
 .btn-wa{background:var(--verde); color:#fff}
 .btn-wa:hover{background:var(--verde-osc)}
+.btn-outline{background:var(--papel); color:var(--tinta); box-shadow:inset 0 0 0 1.5px var(--linea)}
+.btn-outline:hover{box-shadow:inset 0 0 0 1.5px var(--rojo); color:var(--rojo)}
 .btn:focus-visible{outline:3px solid var(--amarillo); outline-offset:2px}
 
 /* ================= aviso ================= */
@@ -397,6 +399,78 @@ section:nth-of-type(even)::before{background:color-mix(in srgb, var(--amarillo) 
 }
 .fallo b{display:block; margin-bottom:4px}
 .fallo button{margin-top:12px; background:var(--rojo); color:#fff}
+
+/* ================= rastreo de pedido ================= */
+.rastreo-marca{display:flex; align-items:center; gap:10px; color:#FFF3DE; text-decoration:none; font-family:var(--disp); font-size:1.15rem}
+.rastreo-marca img{width:38px; height:38px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.3)}
+
+.rastreo-main{max-width:560px; padding-top:32px; padding-bottom:60px}
+.rastreo-tit{font-family:var(--disp); font-weight:400; font-size:clamp(1.6rem,4vw,2.1rem); margin:0 0 18px; color:var(--tinta)}
+.rastreo-ayuda{margin:0 0 16px; color:var(--tinta2); font-size:.92rem; line-height:1.5}
+.rastreo-form, .rastreo-resultado{
+  background:var(--papel); border:1px solid var(--linea); border-radius:16px; padding:20px; box-shadow:var(--sombra);
+}
+
+.rastreo-estado{
+  display:flex; align-items:center; gap:13px; margin:0 0 20px; padding:13px 15px;
+  border-radius:13px; background:linear-gradient(135deg, color-mix(in srgb,var(--rojo) 9%, var(--papel)), var(--papel));
+  border:1px solid color-mix(in srgb,var(--rojo) 20%, var(--linea));
+}
+.rastreo-estado .ic{
+  width:40px; height:40px; flex:none; border-radius:50%;
+  background:linear-gradient(160deg, var(--crema), color-mix(in srgb, var(--amarillo) 20%, var(--crema)));
+  display:grid; place-items:center; padding:6px;
+}
+.rastreo-estado-texto{min-width:0}
+.rastreo-estado-texto b{display:block; font-size:1.05rem; color:var(--tinta); line-height:1.3}
+.rastreo-estado-texto small{display:block; color:var(--tinta2); font-size:.83rem; line-height:1.4; margin-top:2px}
+
+.rastreo-track{list-style:none; display:flex; margin:0 0 22px; padding:0}
+.rastreo-track li{
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center;
+  text-align:center; position:relative; padding:0 2px;
+}
+.rastreo-track li::before{
+  content:""; position:absolute; top:17px; left:-50%; width:100%; height:3px;
+  background:var(--linea); z-index:0; border-radius:2px; transition:background-color .3s ease;
+}
+.rastreo-track li:first-child::before{display:none}
+.rastreo-track li.hecho::before, .rastreo-track li.actual::before{background:var(--rojo)}
+.rastreo-punto{
+  position:relative; z-index:1; width:34px; height:34px; border-radius:50%; background:var(--papel);
+  border:2.5px solid var(--linea); display:grid; place-items:center; font-weight:700; font-size:.85rem;
+  color:var(--tinta3); margin-bottom:8px; flex:none; transition:background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.rastreo-track li.hecho .rastreo-punto{
+  background:var(--rojo); border-color:var(--rojo); color:#FFF3DE;
+  box-shadow:0 3px 8px color-mix(in srgb, var(--rojo) 40%, transparent);
+}
+.rastreo-track li.actual .rastreo-punto{
+  border-color:var(--rojo); color:var(--rojo); background:var(--papel);
+  box-shadow:0 0 0 5px color-mix(in srgb, var(--rojo) 14%, transparent);
+  animation:rastreo-pulso 1.8s ease-in-out infinite;
+}
+@keyframes rastreo-pulso{
+  0%, 100%{ box-shadow:0 0 0 5px color-mix(in srgb, var(--rojo) 14%, transparent) }
+  50%{ box-shadow:0 0 0 9px color-mix(in srgb, var(--rojo) 7%, transparent) }
+}
+.rastreo-etiqueta{font-size:.7rem; font-weight:600; line-height:1.25; color:var(--tinta3)}
+.rastreo-track li.hecho .rastreo-etiqueta{color:var(--tinta2)}
+.rastreo-track li.actual .rastreo-etiqueta{color:var(--rojo); font-weight:700}
+/* Five Spanish status words don't fit next to each other under ~480px without
+   an ugly mid-word break -- the status banner above already spells the
+   current one out in full, so the dots alone carry progress at that width. */
+@media(max-width:480px){
+  .rastreo-etiqueta{display:none}
+}
+
+.rastreo-cancelado{
+  background:color-mix(in srgb,var(--rojo) 10%, var(--papel)); color:var(--rojo-osc);
+  border:1px solid color-mix(in srgb,var(--rojo) 35%, var(--papel)); border-radius:11px;
+  padding:14px; margin:14px 0; font-weight:600; text-align:center;
+}
+.rastreo-otro{width:100%; margin-top:16px}
+.rastreo-link{display:inline-flex; margin-top:14px}
 
 /* ================= pie ================= */
 footer{margin-top:44px; padding:24px 0 10px; border-top:1px solid var(--linea); color:var(--tinta2); font-size:.87rem; line-height:1.6}
