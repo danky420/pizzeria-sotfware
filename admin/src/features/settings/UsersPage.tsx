@@ -74,7 +74,7 @@ export function UsersPage() {
       <PageHeader title="Usuarios" description="Cuentas del portal de administración para esta sucursal." />
 
       <Panel title="Nueva cuenta">
-        <form className="form-grid" onSubmit={submit}>
+        <form className="stack" onSubmit={submit}>
           <Field label="Nombre">
             <input
               value={form.name}
@@ -111,9 +111,11 @@ export function UsersPage() {
               ))}
             </select>
           </Field>
-          <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Creando…" : "Crear cuenta"}
-          </button>
+          <div className="row">
+            <button type="submit" className="btn btn-primary" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Creando…" : "Crear cuenta"}
+            </button>
+          </div>
         </form>
         {notice ? <SuccessNotice>{notice}</SuccessNotice> : null}
         {createMutation.error ? <ErrorNotice error={createMutation.error} /> : null}

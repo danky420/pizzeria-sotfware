@@ -4,85 +4,13 @@ Software for **Pizza's Chesa're**, a pizzería on Av. Ignacio Zaragoza,
 Maltrata, Veracruz, Mexico. Customers browse a live menu and place an order on
 the shop's own site; the shop manages those orders, its menu and prices, its
 hours, promotions and customer history from its own back office. The shop pays
-no commission on anything ordered through it.
-
-This is the first build of a custom-software-for-small-business line of work.
-
-It did not start here. It started as **one static HTML file** with the menu
-hardcoded in JavaScript arrays and orders handed off to WhatsApp. That was the
-right call at the time and the reasoning below is worth reading before you
-judge it. It is no longer the right call, and the section after it explains
-what changed.
-
----
-
-## Part one: why the original single-file site was built that way
-
-*(Historical. This describes the site now archived at
-`src/archive/chesare-v2-vanilla-js.html`. The constraints are still real; the
-conclusions have moved.)*
-
-The constraints came from the business, not from preference:
-
-- **The owner takes orders by phone and WhatsApp today.** The page produced a
-  WhatsApp message, because that was the workflow that already existed.
-  Nothing new to learn.
-- **There was no POS, no inventory system and no staff to run one.** Anything
-  requiring daily data entry would be abandoned in a week.
-- **Delivery apps charge 15–30% nominal, and IVA lands on top of the
-  commission.** Every order that comes through this software instead of Rappi
-  or DiDi keeps that margin in the shop. *This is still the whole point.*
-- **Rural mountain town, patchy data.** The site was one self-contained file
-  with every asset inlined. It loaded on a bad connection and worked offline
-  once installed to the home screen. *This constraint is still real and the
-  current customer app does not yet meet it — see the gotchas.*
-- **Evening-only business** (opens 5:30–6 pm, closed Thursdays). People browse
-  in the afternoon for a 7 pm dinner, so the page stays orderable while closed
-  and says when it opens. *Still true, still implemented.*
-
-The build was a small Python script that turned three tokens in the template
-into base64 `data:` URIs — the header logo, the iOS home-screen icon and the
-web manifest — all cropped out of **one photograph**,
-`assets/source/menu-00-portada.jpg`, the cover of the shop's printed menu. The
-logo was used as a *crop of the printed cover*, red patterned background and
-all, not a transparent cutout: masking the red out left a halo, and eroding
-hard enough to kill the halo ate the black outlines off the lettering. The
-crop looked better and was a third of the size. That recipe still lives in
-`scripts/archive/build.py` if the brand assets are ever needed again.
-
----
-
-## Part two: why that got replaced
-
-The owner's actual ask grew past what a static file can do: real order
-management, real menu and price management, customer history. All of that
-needs a server and a database — there is nowhere else for the state to live.
-
-Two things forced the rewrite specifically:
-
-1. **Hardcoded menu data became a bug, not a simplification.** Once an admin
-   portal existed where the owner could edit a price, the public site kept
-   showing the old one until a developer hand-edited the JS arrays and
-   rebuilt. `docs/customer-site-rework-plan.md` calls this out as the reason
-   the rework happened: a repricing that silently doesn't reach customers is
-   worse than no portal at all. Every price on the shop's printed menu is
-   already a handwritten sticker over the printed one — the paper menu can't
-   keep up with repricing either. Closing that gap is the product.
-
-2. **WhatsApp hand-off can't be managed.** An order that exists only as a
-   message in a chat thread can't be queued, assigned, status-tracked,
-   counted, or looked up next week. The kitchen needed a queue and the owner
-   needed numbers.
-
-So the project is now four cooperating pieces. WhatsApp is no longer part of
-ordering at all — it survives as a general "ask us a question" contact link
-that carries no cart contents. There is still **no online payment**: the
-customer pays cash or card on delivery or pickup, same as before.
+no commission on anything ordered through it. There is no online payment — the
+customer pays cash or card on delivery or pickup.
 
 `docs/backend-admin-plan.md` and `docs/customer-site-rework-plan.md` are the
 detailed specs and the record of decisions already made with the owner. This
-document is the orientation and the rationale; `CLAUDE.md` is the short
-working map. Read the plan docs before changing anything structural.
+document is the orientation; `CLAUDE.md` is the short working map. Read the
+plan docs before changing anything structural.
 
 ---
 
@@ -106,7 +34,7 @@ working map. Read the plan docs before changing anything structural.
 | `admin/` | React + Vite. Analytics, orders, menu/pricing, promotions, customers, hours, users. | `OWNER`, `MANAGER`, `SUPER_ADMIN` |
 | `employee/` | React + Vite. Orders queue and detail. Nothing else. | `STAFF` (and any other role — permissive by design) |
 | `backend/` | Fastify + TypeScript + Prisma + Postgres. The API, and in production the one service that serves all three builds. | Everything |
-| `packages/portal-shared/` | Types, admin API client, auth context, order-status constants, UI primitives. TypeScript source, no build step. | `admin/` and `employee/` only |
+| `packages/portal-shared/` | Types, API client, auth context, order-status constants, the orders queue/detail screens, UI primitives. TypeScript source, no build step. | `admin/` and `employee/` only |
 
 npm workspaces, root `package.json`. Node >= 20.
 
@@ -115,6 +43,12 @@ npm workspaces, root `package.json`. Node >= 20.
 `employee/`. This is a UX decision layered on top of the real boundary, which
 is enforced per-route in `backend/src/auth/middleware.ts`: `STAFF` can reach
 the orders routes and nothing else, regardless of which app asks.
+
+**The orders queue is one implementation, not two.** `packages/portal-shared`'s
+`OrdersQueuePage`/`OrderDetailPage` render identically in both apps; the only
+difference is that `admin/` passes a `customerLinkTo` prop for the
+customer-history link, which `employee/` doesn't have. Fix or change the
+queue once, in `packages/portal-shared/src/orders/`, and both apps get it.
 
 ### One origin, four path prefixes
 
@@ -152,11 +86,10 @@ price or a `MenuItemPriceCell` matrix (size × style) plus
 covers all three price shapes in the real menu rather than one table per
 shape. Full detail in `docs/backend-admin-plan.md`.
 
-**`p: null` survived the migration intact.** `MenuItem.flatPrice` and
-`MenuItemPriceCell.price` are both nullable and mean exactly what the old
-array did: "we don't know this price." The item renders greyed out as
-"Pregunta el precio", can't be added to the cart, and is rejected server-side.
-Never substitute a guess.
+**`p: null` is load-bearing.** `MenuItem.flatPrice` and
+`MenuItemPriceCell.price` are both nullable and mean "we don't know this
+price." The item renders greyed out as "Pregunta el precio", can't be added to
+the cart, and is rejected server-side. Never substitute a guess.
 
 ### Important files
 
@@ -168,12 +101,9 @@ Never substitute a guess.
 | `backend/prisma/schema.prisma` | The data model. |
 | `backend/prisma/seed.ts` | The initial menu, transcribed from `assets/source/`. |
 | `backend/src/app.ts` | Route registration, CORS, rate limiting, static serving. |
+| `packages/portal-shared/src/orders/` | The shared orders queue and detail screens. |
 | `assets/source/` | Photographs of the shop's printed menu. **Still the price source of truth.** |
 | `src/corte.html` | Standalone delivery-app margin calculator. Sales tool, not part of the site. No assets, no build — open it directly. |
-| `src/archive/chesare-v1.html` | First pass. Dark "oven at night" palette, placeholder prices. Reference only. |
-| `src/archive/chesare-v2-vanilla-js.html` | The single-file WhatsApp site `customer/` replaced. Reference only — it is still the best written record of the UX the React app ports. |
-| `scripts/archive/build.py` | Retired. The brand-asset crop recipe (`RECORTE_MARCA`, `RECORTE_ICONO`) lives here. |
-| `scripts/archive/check_mobile.py` | Retired. The phone-width checks it encodes are still the right ones if `customer/` ever gets a smoke test. |
 
 ---
 
@@ -183,9 +113,6 @@ Never substitute a guess.
 - **PostgreSQL** (any recent version; 14+ is fine) reachable via
   `DATABASE_URL`.
 - A text editor.
-
-Python is no longer needed for anything. `requirements.txt` exists only for
-the retired scripts in `scripts/archive/`.
 
 ## Setting up a fresh environment
 
@@ -213,16 +140,16 @@ same-origin and means you never touch CORS.
 
 ### Environment variables
 
-There used to be none. There are now real ones. See "Handling secrets" below
-and `.env.example` for the full shape.
-
 Backend (`.env` at the repo root, or `backend/.env`, which is read first):
 `DATABASE_URL`, `SESSION_COOKIE_SECRET`, `ADMIN_ORIGIN`,
 `PUBLIC_SITE_ORIGINS`, `PORT`, `NODE_ENV`, `LOG_LEVEL`.
 
 Frontends (`admin/.env.local`, `employee/.env.local`, `customer/.env.local`):
-`VITE_API_BASE_URL` (empty means same origin — what production wants),
-`VITE_API_PROXY_TARGET`, and `admin/`'s `VITE_EMPLOYEE_APP_URL`.
+`VITE_API_BASE_URL` (empty means same origin — what production wants, and
+what local dev should almost always leave it as; the Vite proxy handles
+`/api` from there), `VITE_API_PROXY_TARGET`, and `admin/`'s
+`VITE_EMPLOYEE_APP_URL`. See "Handling secrets" below and `.env.example` for
+the full shape.
 
 ## Running locally
 
@@ -272,34 +199,26 @@ run it after touching any of them.
 
 `backend/` has a real vitest suite (unit plus DB-backed integration). The
 three frontends have `typecheck` and a type-checked build (`tsc --noEmit &&
-vite build`) and no test suite.
-
-There is no linter or formatter configured.
-
-`scripts/archive/check_mobile.py`, the old Playwright smoke test, is retired
-with the static site it drove. `customer/` has no equivalent. Adding one is
-reasonable, separate work — the checks worth keeping are in that file.
+vite build`) and no test suite. There is no linter or formatter configured.
 
 ---
 
 ## How configuration is managed
 
-The big change: **the menu, the prices and the hours are database rows now,
-not literals in a file.** The owner edits them in `admin/`; `customer/` reads
-them live. That was the entire point of the rework — do not reintroduce
-hardcoded menu data in any frontend.
+The menu, the prices and the hours are **database rows, not literals in a
+file.** The owner edits them in `admin/`; `customer/` reads them live. Do not
+hardcode menu data in any frontend.
 
 | Thing | Where |
 |---|---|
 | Menu, prices, sizes, styles, option groups | Postgres, edited in `admin/`. Initial values in `backend/prisma/seed.ts`. |
 | Opening hours | `BusinessHours` rows, edited in `admin/`. Served by `GET /api/public/locations/:slug/hours`. |
 | Timezone | `Location.timezone` (`America/Mexico_City`). Deliberate — never the visitor's timezone. |
-| WhatsApp number | `Location.waNumber`. No longer surfaced as a contact link in `customer/` — the site is the ordering channel, and the footer's phone numbers are the contact path instead. Field stays seeded for now in case that changes. |
+| WhatsApp number | `Location.waNumber`. Not surfaced anywhere in `customer/` today — the site is the ordering and contact channel; the footer's phone numbers cover contact. Field stays seeded in case a WhatsApp surface is added later. |
 | Location slug | `LOCATION_SLUG` in `customer/src/api/client.ts` (`chesare-maltrata`). |
 | Backend config | `.env` — see above. |
 | Colours | CSS custom properties on `:root`, per app, with dark-mode overrides. Brand red `#D22B27`, sign yellow `#FFD429`. |
 | Path prefixes | `backend/src/app.ts` + each app's Vite `base`. |
-| Brand image crops | `RECORTE_MARCA` / `RECORTE_ICONO` in `scripts/archive/build.py`. Pixel coords against the original 1080×1920 photo. |
 
 ## How to change the menu
 
@@ -345,12 +264,6 @@ Never commit `dist/` (gitignored at any depth) or a filled-in `.env`.
 
 ## Handling secrets
 
-**The old position — "there are no secrets in this project and it should stay
-that way" — is obsolete.** It was true of a static file with no backend. It is
-not true now, and leaving it standing would be actively misleading.
-
-What exists now:
-
 - **Database credentials** (`DATABASE_URL`) and the **session cookie secret**
   (`SESSION_COOKIE_SECRET`, >= 32 chars). Both in `.env`, gitignored, shape
   documented in `.env.example`. Rotating the cookie secret invalidates every
@@ -363,11 +276,9 @@ What exists now:
 - **`VITE_*` variables are compiled into the frontend bundles and are public.**
   Anyone can read them. Never put a secret in one.
 
-### The privacy position has genuinely changed
+### Customer data
 
-The old site could claim customer data "never touches disk" — an order lived
-in the URL of a WhatsApp link the customer tapped and nowhere else. **That is
-no longer true and must not be repeated.** The backend now stores, by design:
+The backend stores, by design:
 
 - customer **name, phone and address**, and a `Customer` record keyed on phone
   per location;
@@ -375,9 +286,9 @@ no longer true and must not be repeated.** The backend now stores, by design:
   status;
 - and `admin/` surfaces all of it, including a per-customer history view.
 
-This is the feature the owner asked for. It also means the project now holds
-personal data about real people in a small town, which brings obligations the
-old design dodged entirely:
+This is the feature the owner asked for, and it means the project holds
+personal data about real people in a small town. Obligations that come with
+that:
 
 - Don't copy customer data anywhere it doesn't need to go — no logging of
   request bodies on the order endpoint, no analytics capturing it, no real
@@ -386,9 +297,8 @@ old design dodged entirely:
   Its rate limiting and Zod payload caps are load-bearing, not decoration.
 - Every admin handler must scope by `locationId` (unless `SUPER_ADMIN`) and by
   role. Never trust a `:locationId` path param alone.
-- There is still no third-party analytics and no cookie beyond the admin
-  session — but "nothing to consent to" is no longer the reason. Adding
-  tracking now means a privacy notice and a real think, not just a banner.
+- No third-party analytics, no cookie beyond the admin session. Adding
+  tracking means a privacy notice and a real think, not a banner.
 - The shop's two phone numbers are publicly printed contact details (on the
   storefront sign and the menu cover) and are fine to commit.
 
@@ -414,8 +324,8 @@ Then, by hand, because nothing above catches these:
   order and read the confirmation end to end — an order number, an itemised
   summary, a total, and a plain statement of how they pay.
 - Stop the backend and try again. The failure has to be visible and
-  retryable, with the cart and form preserved. There is no WhatsApp fallback
-  any more, so a silent failure is a lost order.
+  retryable, with the cart and form preserved — a silent failure here is a
+  lost order.
 - Toggle dark mode. Every app has a full dark variant and it's easy to break.
 - If you touched path prefixes or Vite `base`: `npm start` and load `/`,
   `/admin` and `/staff`.
@@ -425,9 +335,7 @@ Then, by hand, because nothing above catches these:
 ## Deployment
 
 **Railway**: one Postgres plugin and one Node service (`backend/`) serving
-`/api/*` plus the three built frontends at their path prefixes. The old
-process — `python build.py`, drag `dist/` onto Netlify Drop — is gone with the
-static site.
+`/api/*` plus the three built frontends at their path prefixes.
 
 Deployment shape, env vars and the provisioning steps are in
 `docs/backend-admin-plan.md` ("Deployment"); the `use-railway` skill does the
@@ -472,10 +380,18 @@ that origin in `PUBLIC_SITE_ORIGINS`/`ADMIN_ORIGIN` too.
 **A `STAFF` login is refused in `admin/`** — working as designed. It should
 show the employee-app pointer. Use `employee/`.
 
+**`customer/` can't load the menu** — almost always `VITE_API_BASE_URL` in
+`customer/.env.local`. Leave it empty for the Vite dev proxy to handle `/api`
+same-origin; an absolute URL there only works if the browser can actually
+reach that host directly (it won't, over a tunnel/forwarded dev environment),
+and it also has to be in the backend's `PUBLIC_SITE_ORIGINS` or the request
+gets blocked by CORS instead of just failing to connect. Check the browser's
+network tab for the actual failure before guessing.
+
 **Menu changes in `admin/` don't show on the customer site** — check the
 customer app is actually hitting `GET /api/public/locations/:slug/menu` and
 that `LOCATION_SLUG` matches the seeded location. This failure mode is the
-exact bug the rework existed to kill, so treat it as serious.
+exact bug the current architecture exists to prevent, so treat it as serious.
 
 **403 on an admin route that should work** — role or location scoping.
 `STAFF` reaches orders routes only; everything else is location-scoped against
@@ -497,25 +413,20 @@ page makes. Offline or behind a blocker you get the fallback stacks.
    sources). *TODO: get the owner to pick one — the split is costing them
    search traffic.*
 
-2. **WhatsApp is no longer part of the customer site at all** — no "ask a
-   question" button, no `wa.me` link. `customer/` is meant to be the one
-   ordering and contact channel; the footer's phone numbers (`272 260 3537`,
-   `272 100 5211`) are how a customer reaches the shop outside the site.
-   `Location.waNumber` (`522722603537`) stays seeded on the backend in case a
-   WhatsApp surface comes back later, but nothing reads it today. The old
-   unverified-number risk (Mexican mobiles sometimes need `521` + 10 digits
-   rather than `52` + 10) is moot while it's unused; re-verify before wiring
-   it back up.
+2. **WhatsApp is not part of the customer site.** No "ask a question" button,
+   no `wa.me` link. `customer/` is the one ordering and contact channel; the
+   footer's phone numbers (`272 260 3537`, `272 100 5211`) are how a customer
+   reaches the shop outside the site. `Location.waNumber` (`522722603537`)
+   stays seeded on the backend in case a WhatsApp surface is added later, but
+   nothing reads it today.
 
-3. **`customer/` has no offline support yet.** The old static site loaded on a
-   bad connection and worked offline once installed to the home screen. The
-   React app does not: phase 2 of `docs/customer-site-rework-plan.md`
-   (service worker, app-shell precache, stale-while-revalidate menu cache with
-   a "mostrando el menú guardado" notice, checkout disabled rather than queued
-   offline) is **specified but not built** — there is no `vite-plugin-pwa` and
-   no service worker in the tree. Maltrata is a rural mountain town with
-   patchy data. This is a real regression against the original design, and it
-   is the most product-relevant piece of unfinished work.
+3. **`customer/` has no offline support.** Maltrata is a rural mountain town
+   with patchy data, so this matters. Phase 2 of
+   `docs/customer-site-rework-plan.md` (service worker, app-shell precache,
+   stale-while-revalidate menu cache with a "mostrando el menú guardado"
+   notice, checkout disabled rather than queued offline) is **specified but
+   not built** — there is no `vite-plugin-pwa` and no service worker in the
+   tree. This is the most product-relevant piece of unfinished work.
 
 4. **Several seeded prices are unconfirmed reads of handwritten stickers.**
    Three items have no price at all because the printed menu has blank
@@ -536,8 +447,8 @@ page makes. Offline or behind a blocker you get the fallback stacks.
    *TODO: verify.*
 
 8. **Every price on the printed menu is a handwritten sticker over the printed
-   one.** The paper menu can't keep up with repricing. That gap is the reason
-   this project exists — and the reason the menu had to move into a database.
+   one.** The paper menu can't keep up with repricing, which is why the menu
+   lives in a database that the owner can edit directly.
 
 9. **Comments and UI strings are in Spanish, documentation is in English.**
    The product ships to Spanish speakers; the docs are for the developer. Keep
@@ -552,10 +463,8 @@ page makes. Offline or behind a blocker you get the fallback stacks.
     alcohol that need more than a notice.*
 
 12. **The backend stores customer PII** — names, phones, addresses, order
-    history. See "Handling secrets" above. This is a deliberate, owner-
-    requested change from the original design's absolute "never touches disk"
-    position, and it is the single biggest non-technical obligation the
-    project has acquired.
+    history. See "Handling secrets" above. This is the single biggest
+    non-technical obligation the project carries.
 
 13. **Four things must agree about path prefixes**: `backend/src/app.ts`, each
     app's Vite `base`, and `admin`/`employee`'s router `basename`. Change one,
@@ -563,8 +472,7 @@ page makes. Offline or behind a blocker you get the fallback stacks.
     the mismatch.
 
 14. **Prices in the code must match `assets/source/`.** Those photographs are
-    still the source of truth, now for the seed rather than for hand-edited
-    arrays.
+    the source of truth for the seed.
 
 ---
 
@@ -572,8 +480,8 @@ page makes. Offline or behind a blocker you get the fallback stacks.
 
 - *TODO: no written agreement with the shop about who owns this code, what
   happens if the relationship ends, or whether the menu photographs can be
-  redistributed. This mattered before; now that the system holds customer
-  personal data it matters considerably more — settle it before launch.*
+  redistributed. Now that the system holds customer personal data this
+  matters considerably more — settle it before launch.*
 - *TODO: no delivery fee or minimum order in the model — unknown whether the
   shop charges either.*
 - *TODO: `src/corte.html` uses market-range commission figures, not Chesa're's

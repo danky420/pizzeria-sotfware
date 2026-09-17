@@ -8,11 +8,9 @@ import { hashPassword } from "../src/auth/hash.js";
 /**
  * Seeds the one real shop: Pizza's Chesa're in Maltrata, Veracruz.
  *
- * The menu below is a hand-translated copy of the arrays in src/archive/chesare-v2-vanilla-js.html
- * (TALLAS, ESTILOS, PIZZAS, ESPECIALES, BURGERS, ALITAS_65/80, PASTAS, POSTRES,
- * FRAPPES, CAFES, REFRESCOS, CERVEZAS, HORAS), which are themselves transcribed
- * from photographs of the shop's handwritten printed menu. Two rules carried over
- * verbatim and must stay that way:
+ * The menu below is transcribed from photographs of the shop's handwritten
+ * printed menu (`assets/source/`) — still the price source of truth. Two
+ * rules carried over from that transcription and must stay that way:
  *
  *   - `p: null` means "Pregunta el precio" — listed but not orderable. It is
  *     seeded as a NULL price, never as a guess and never as zero.
@@ -40,7 +38,7 @@ const LOCATION = {
   currency: "MXN"
 };
 
-/* ============ menu data, translated from src/archive/chesare-v2-vanilla-js.html ============ */
+/* ============ menu data, transcribed from the shop's printed menu ============ */
 
 interface FlatSource {
   id: string;
@@ -114,7 +112,7 @@ const ALITAS_80 = [
 ];
 
 const PASTAS = ["Fettuccini Alfredo", "Fusilli boloñesa", "Linguini al aceite y ajo", "Penne a la vodka"];
-const PASTA_PRICE = 170; // src/archive/chesare-v2-vanilla-js.html abrirLista("Pasta", ... , 170, ...)
+const PASTA_PRICE = 170; // one price for any pasta flavor, per the printed menu
 const ALITAS_65_PRICE = 65;
 const ALITAS_80_PRICE = 80;
 
@@ -166,8 +164,8 @@ const CERVEZAS: FlatSource[] = [
   { id: "ce-mic", n: "Michelada", p: null }
 ];
 
-// Index 0 is Sunday, matching both HORAS in src/archive/chesare-v2-vanilla-js.html and
-// BusinessHours.dayOfWeek. Decimal hours; Thursday is closed.
+// Index 0 is Sunday, matching BusinessHours.dayOfWeek. Decimal hours;
+// Thursday is closed.
 const HORAS: { d: string; a: number | null; c: number | null }[] = [
   { d: "Domingo", a: 17.5, c: 24 },
   { d: "Lunes", a: 18, c: 24 },
@@ -178,7 +176,6 @@ const HORAS: { d: string; a: number | null; c: number | null }[] = [
   { d: "Sábado", a: 17.5, c: 24 }
 ];
 
-// Section list and slugs from SECS in src/archive/chesare-v2-vanilla-js.html.
 const CATEGORIES = [
   { slug: "pizzas", name: "Pizzas", description: "Seis tamaños, con orilla rellena o extra queso si quieres" },
   { slug: "hamburguesas", name: "Hamburguesas", description: null },

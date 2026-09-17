@@ -94,6 +94,20 @@ export function ColumnChart({
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => max * ratio);
 
   const peak = points.reduce((best, point) => (point.value > best.value ? point : best), points[0]!);
+  const peakIndex = points.findIndex((point) => point.key === peak.key);
+  const labelX = (index: number) => padding.left + index * band + band / 2;
+  // "31/12"-width text needs ~40 viewBox units either side of its own center;
+  // any closer than that to an edge label and the two overlap into one
+  // unreadable smear rather than two dates. When the tallest day lands next
+  // to either end of a wide range, skip its label instead of colliding —
+  // the bar itself is still the tallest thing on the chart, and the tooltip
+  // still has the exact date on hover.
+  const MIN_LABEL_GAP = 40;
+  const peakCollidesWithEdge =
+    peakIndex !== 0 &&
+    peakIndex !== points.length - 1 &&
+    (Math.abs(labelX(peakIndex) - labelX(0)) < MIN_LABEL_GAP ||
+      Math.abs(labelX(peakIndex) - labelX(points.length - 1)) < MIN_LABEL_GAP);
 
   return (
     <div className="viz-frame">
@@ -164,10 +178,16 @@ export function ColumnChart({
           // Label the extreme and the two ends only — a number on every column
           // is noise, and the axis already carries the rest.
           const isEdge = index === 0 || index === points.length - 1;
-          if (!isEdge && point.key !== peak.key) return null;
-          const x = padding.left + index * band + band / 2;
+          const isPeak = index === peakIndex && !peakCollidesWithEdge;
+          if (!isEdge && !isPeak) return null;
           return (
-            <text key={point.key} x={x} y={height - 10} textAnchor="middle" className="viz-axis-text">
+            <text
+              key={point.key}
+              x={labelX(index)}
+              y={height - 10}
+              textAnchor="middle"
+              className="viz-axis-text"
+            >
               {point.label}
             </text>
           );

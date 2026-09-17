@@ -33,6 +33,10 @@
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Reserved for the "Chesa're" wordmark only — everything else stays system-ui
+     for data density. Ties the back office back to the customer site's brand
+     without touching the tool's legibility. */
+  --disp: "Bevan", var(--font);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -155,16 +159,22 @@ code {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
 }
 
 .brand-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: inset 0 0 0 3px var(--sign-yellow);
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 7px;
+  box-shadow: 0 1px 3px rgba(20, 18, 12, 0.35);
+}
+
+.brand-word {
+  font-family: var(--disp);
+  font-weight: 400;
+  font-size: 17px;
+  color: var(--brand);
+  letter-spacing: 0.01em;
 }
 
 .shell-nav {
@@ -317,6 +327,13 @@ code {
   gap: 10px;
   align-items: flex-end;
   flex-wrap: wrap;
+}
+
+/* A `.field` in a `.toolbar` otherwise sizes to the input's browser-default
+   width — fine for a short select or a price, cramped for the one field
+   someone is actually meant to type a name into. Opt in on that field only. */
+.field-grow {
+  flex: 2 1 220px;
 }
 
 .grid-2 {
@@ -549,10 +566,8 @@ td {
 }
 
 th {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-muted);
+  font-size: 12.5px;
+  color: var(--text-secondary);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -567,6 +582,71 @@ tbody tr:hover td {
 
 .row-link {
   cursor: pointer;
+}
+
+/* Orders queue on a phone or a narrow window: below ~640px the table becomes
+   a stack of one-order cards instead of a table a thumb has to scroll
+   sideways through. Kept identical to employee/'s copy on purpose — same
+   shared OrdersQueuePage component, same markup, same breakpoint. */
+@media (max-width: 640px) {
+  .orders-table table,
+  .orders-table thead,
+  .orders-table tbody,
+  .orders-table tr,
+  .orders-table th,
+  .orders-table td {
+    display: block;
+  }
+
+  .orders-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .orders-table tbody tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+
+  .orders-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .orders-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: none;
+    text-align: right;
+  }
+
+  .orders-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+
+  .orders-table td.orders-primary {
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+  }
+
+  .orders-table td.orders-primary::before {
+    font-weight: 700;
+    color: var(--text);
+  }
 }
 
 /* ---------------------------------------------------------- menu editor */
@@ -641,7 +721,7 @@ tbody tr:hover td {
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
   gap: 12px;
 }
 
@@ -666,10 +746,14 @@ tbody tr:hover td {
   font-weight: 650;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  /* A currency figure has no space or hyphen to wrap at, so without this a
+     value wider than the tile paints past its own box and disappears under
+     the next tile's opaque background instead of visibly wrapping. */
+  overflow-wrap: anywhere;
 }
 
 .stat-tile-hero .stat-value {
-  font-size: 40px;
+  font-size: 28px;
 }
 
 .stat-hint {

@@ -544,7 +544,7 @@ function NewItemForm({ categoryId, nextSortOrder }: { categoryId: string; nextSo
   const [name, setName] = useState("");
   const [itemType, setItemType] = useState<ItemType>("FLAT");
   const [price, setPrice] = useState("");
-  const [invalid, setInvalid] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   const create = useMutation({
     mutationFn: (flatPrice: number | null) =>
@@ -572,21 +572,37 @@ function NewItemForm({ categoryId, nextSortOrder }: { categoryId: string; nextSo
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (name.trim() === "") return;
-    const parsed = parsePrice(price);
-    if (parsed === undefined) {
-      setInvalid(true);
+
+    // Unlike editing an existing item (where clearing the price back to "sin
+    // precio" is the documented, load-bearing way to mark a price genuinely
+    // unknown), a brand-new product has no printed-menu blank sticker excuse —
+    // whoever is adding it here knows the price, so this form requires one.
+    if (itemType !== "FLAT") {
+      setPriceError(null);
+      create.mutate(null);
       return;
     }
-    setInvalid(false);
+    if (price.trim() === "") {
+      setPriceError("El precio es obligatorio.");
+      return;
+    }
+    const parsed = parsePrice(price);
+    if (parsed === undefined || parsed === null) {
+      setPriceError("El precio no es un número válido.");
+      return;
+    }
+    setPriceError(null);
     create.mutate(parsed);
   };
 
   return (
     <Panel title="Nuevo producto">
       <form className="toolbar" onSubmit={onSubmit}>
-        <Field label="Nombre" hint={name ? `Clave: ${slugify(name)}` : undefined}>
-          <input value={name} onChange={(event) => setName(event.target.value)} required />
-        </Field>
+        <div className="field-grow">
+          <Field label="Nombre" hint={name ? `Clave: ${slugify(name)}` : undefined}>
+            <input value={name} onChange={(event) => setName(event.target.value)} required />
+          </Field>
+        </div>
         <Field label="Tipo">
           <select value={itemType} onChange={(event) => setItemType(event.target.value as ItemType)}>
             <option value="FLAT">Precio fijo</option>
@@ -594,12 +610,13 @@ function NewItemForm({ categoryId, nextSortOrder }: { categoryId: string; nextSo
           </select>
         </Field>
         {itemType === "FLAT" ? (
-          <Field label="Precio" hint="Vacío = sin precio">
+          <Field label="Precio">
             <input
               inputMode="decimal"
-              placeholder="Sin precio"
+              placeholder="0.00"
               value={price}
               onChange={(event) => setPrice(event.target.value)}
+              required
             />
           </Field>
         ) : null}
@@ -607,7 +624,7 @@ function NewItemForm({ categoryId, nextSortOrder }: { categoryId: string; nextSo
           {create.isPending ? "Creando…" : "Crear"}
         </button>
       </form>
-      {invalid ? <p className="notice notice-error">El precio no es un número válido.</p> : null}
+      {priceError ? <p className="notice notice-error">{priceError}</p> : null}
       <ErrorNotice error={create.error} title="No se pudo crear el producto" />
     </Panel>
   );

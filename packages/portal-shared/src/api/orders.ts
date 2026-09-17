@@ -6,6 +6,7 @@ export interface OrderListFilters {
   customerId?: string;
   from?: string;
   to?: string;
+  q?: string;
   page?: number;
   pageSize?: number;
 }
@@ -28,6 +29,7 @@ export const ordersApi = {
         customerId: filters.customerId,
         from: filters.from,
         to: filters.to,
+        q: filters.q || undefined,
         page: filters.page,
         pageSize: filters.pageSize
       })}`

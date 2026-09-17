@@ -54,7 +54,7 @@ export function LocationPage() {
         {locationQuery.isPending ? <Loading /> : null}
         {locationQuery.error ? <ErrorNotice error={locationQuery.error} /> : null}
         {locationQuery.data ? (
-          <form className="form-grid" onSubmit={submit}>
+          <form className="stack" onSubmit={submit}>
             <Field label="Nombre">
               <input value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
             </Field>
@@ -88,9 +88,11 @@ export function LocationPage() {
               onChange={(active) => setForm((prev) => ({ ...prev, active }))}
               label="Sucursal activa"
             />
-            <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Guardando…" : "Guardar cambios"}
-            </button>
+            <div className="row">
+              <button type="submit" className="btn btn-primary" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Guardando…" : "Guardar cambios"}
+              </button>
+            </div>
           </form>
         ) : null}
         {notice ? <SuccessNotice>{notice}</SuccessNotice> : null}

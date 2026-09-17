@@ -17,12 +17,14 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.102.8",
-    "react": "^19.3.0"
+    "react": "^19.3.0",
+    "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.102.8",
     "@types/react": "^19.3.0",
     "react": "^19.3.0",
+    "react-router-dom": "^7.18.3",
     "typescript": "^5.9.3"
   },
   "engines": {

@@ -24,8 +24,8 @@ function Shell() {
     <div className="shell">
       <header className="shell-top">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <span>Chesa're</span>
+          <img className="brand-mark" src="/marca.webp" alt="" width={32} height={32} />
+          <span className="brand-word">Chesa're</span>
         </div>
 
         <nav className="shell-nav">

@@ -92,16 +92,36 @@ export function orderRangeFilter(from?: Date, to?: Date): Prisma.DateTimeFilter 
   };
 }
 
+/**
+ * `q` matches a customer name/phone substring, or an exact order number when it
+ * parses as one — a staff member searching "165" almost always means order
+ * #165, not a coincidental phone-number substring, so the number match is
+ * offered alongside the text match rather than instead of it.
+ */
+export function orderSearchFilter(q?: string): Prisma.OrderWhereInput | undefined {
+  const trimmed = q?.trim();
+  if (!trimmed) return undefined;
+  const asOrderNumber = /^\d+$/.test(trimmed) ? Number(trimmed) : undefined;
+  return {
+    OR: [
+      { customerName: { contains: trimmed, mode: "insensitive" } },
+      { customerPhone: { contains: trimmed } },
+      ...(asOrderNumber !== undefined ? [{ orderNumber: asOrderNumber }] : [])
+    ]
+  };
+}
+
 export function orderWhere(
   locationId: string | undefined,
-  filters: { status?: OrderStatus; customerId?: string; from?: Date; to?: Date }
+  filters: { status?: OrderStatus; customerId?: string; from?: Date; to?: Date; q?: string }
 ): Prisma.OrderWhereInput {
   const createdAt = orderRangeFilter(filters.from, filters.to);
   return {
     ...(locationId ? { locationId } : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.customerId ? { customerId: filters.customerId } : {}),
-    ...(createdAt ? { createdAt } : {})
+    ...(createdAt ? { createdAt } : {}),
+    ...(orderSearchFilter(filters.q) ?? {})
   };
 }
 

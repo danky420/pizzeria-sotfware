@@ -71,6 +71,8 @@ export const orderListQuery = paginationQuery.extend({
   status: orderStatusSchema.optional(),
   customerId: idSchema.optional(),
   from: z.coerce.date().optional(),
-  to: z.coerce.date().optional()
+  to: z.coerce.date().optional(),
+  // Free text: matches a customer name/phone substring or an exact order number.
+  q: z.string().trim().min(1).max(100).optional()
 });
 export type OrderListQuery = z.infer<typeof orderListQuery>;

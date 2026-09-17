@@ -2,13 +2,16 @@ import { Outlet } from "react-router-dom";
 import { EmptyState, useAuth } from "@chesare/portal-shared";
 
 /**
- * There is one section in this app, so there is no nav — just who is signed in,
- * which branch their orders belong to, and the way out. `admin/`'s AppShell
- * (nav, branch switcher, location provider) has nothing to offer a queue.
+ * There is one section in this app, so there is no nav — just who is signed in
+ * and the way out, matching `admin/`'s header for the same account (no branch
+ * name printed there either; a single-location account naming its own branch
+ * next to "Chesa're" is just the brand name twice).
  *
- * The branch comes straight from the session: `GET /auth/me` returns the
- * location every non-SUPER_ADMIN account is pinned to, and the API scopes
- * orders to it regardless of what this app asks for.
+ * The branch itself still comes straight from the session: `GET /auth/me`
+ * returns the location every non-SUPER_ADMIN account is pinned to, and the API
+ * scopes orders to it regardless of what this app asks for — it's just not
+ * displayed, the same as `admin/` doesn't display it for a single-location
+ * OWNER/MANAGER.
  */
 export function AppShell() {
   const { user, location, logout } = useAuth();
@@ -17,9 +20,8 @@ export function AppShell() {
     <div className="shell">
       <header className="shell-top">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <span>Chesa're</span>
-          {location ? <span className="muted shell-location">· {location.name}</span> : null}
+          <img className="brand-mark" src="/marca.webp" alt="" width={32} height={32} />
+          <span className="brand-word">Chesa're</span>
         </div>
 
         <div className="shell-user">

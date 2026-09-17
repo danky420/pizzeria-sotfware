@@ -54,9 +54,11 @@ export function MenuPage() {
       {showForm ? (
         <Panel title="Nueva categoría">
           <form className="toolbar" onSubmit={onSubmit}>
-            <Field label="Nombre" hint={name ? `Clave: ${slugify(name)}` : undefined}>
-              <input value={name} onChange={(event) => setName(event.target.value)} required />
-            </Field>
+            <div className="field-grow">
+              <Field label="Nombre" hint={name ? `Clave: ${slugify(name)}` : undefined}>
+                <input value={name} onChange={(event) => setName(event.target.value)} required />
+              </Field>
+            </div>
             <button type="submit" className="btn btn-primary" disabled={createCategory.isPending}>
               {createCategory.isPending ? "Creando…" : "Crear"}
             </button>

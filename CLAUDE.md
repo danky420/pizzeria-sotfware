@@ -9,10 +9,9 @@ Maltrata, Veracruz, Mexico. Customers browse a live menu and place a real
 order; the shop manages that order, its menu, prices, hours, promotions and
 customer history from a back office.
 
-It started as one static HTML file that built a WhatsApp link (see
-`READER.md` for that history and why it was right at the time). It is now four
-apps around a shared backend and database. WhatsApp is no longer the ordering
-channel — only a general "ask us a question" contact link.
+It is four apps around a shared backend and database. WhatsApp is not part of
+the customer site at all — the site itself is the ordering and contact
+channel.
 
 **The detailed architecture lives in `docs/`, not here.** Read those before
 making structural changes; this file is a map, not a spec.
@@ -72,16 +71,6 @@ with `base:"/admin/"`, `employee/` with `base:"/staff/"`, `customer/` at `"/"`.
 `admin/` and `employee/` pass `import.meta.env.BASE_URL` as their React Router
 `basename` so client-side routes match. **Changing one of these four things
 means changing the others.**
-
-### Retired
-
-- `src/archive/chesare-v1.html` — first pass. Reference only, never deploy.
-- `src/archive/chesare-v2-vanilla-js.html` — the single-file static site that
-  `customer/` replaced. Reference only, never deploy.
-- `scripts/archive/build.py` — built the static site (brand-asset crops +
-  base64 token injection). Retired; kept for the asset recipe it documents.
-- `scripts/archive/check_mobile.py` — Playwright smoke test for the static
-  site. Retired. `customer/` has no equivalent yet; adding one is new work.
 
 Still live outside the apps:
 
@@ -165,7 +154,7 @@ gone with the static site; do not reinstate it.
   seed time — they are credentials, not fixtures. Don't commit them.
 - The shop's two phone numbers are publicly printed contact details and are
   fine in tracked files. **Customer names, phones, addresses and order history
-  are not** — they now live in Postgres by design (see `READER.md`). Don't add
+  are not** — they now live in Postgres by design (see `readme.md`). Don't add
   logging, analytics or fixtures that copy them anywhere else, and don't paste
   real order data into the repo.
 - If something sensitive is committed: rotate the credential first, then clean
@@ -199,24 +188,22 @@ added to a cart, and is rejected server-side. **Never substitute a guess.**
 ## Language convention
 
 Comments and UI strings are in **Spanish** — the product ships to Spanish
-speakers. Documentation (`CLAUDE.md`, `READER.md`, `docs/`) is in **English**.
+speakers. Documentation (`CLAUDE.md`, `readme.md`, `docs/`) is in **English**.
 Don't translate UI strings to English "for clarity."
 
 ## Known risk areas
 
-`READER.md` has the full list with context. The load-bearing ones:
+`readme.md` has the full list with context. The load-bearing ones:
 
-- **The WhatsApp number is still unverified** (`522722603537`, seeded on
-  `Location.waNumber`). Mexican mobiles sometimes need `521` + 10 digits.
-  Far less dangerous than it was — it is a contact link now, not the order
-  channel — but a wrong number is still a dead link.
+- **WhatsApp is not part of `customer/` at all** — no button, no `wa.me` link.
+  `Location.waNumber` (`522722603537`, unverified) stays seeded on the backend
+  in case a WhatsApp surface is added later, but nothing reads it today.
 - **Several seeded prices are unconfirmed reads of handwritten stickers**
   (wings tiers, `ESPECIALES` sizing, caguama). Some items are deliberately
   `p: null`. Don't "fix" either without a confirmed real price.
 - **`customer/`'s PWA/offline layer is not built yet** (phase 2 of
-  `docs/customer-site-rework-plan.md`). The old static site worked offline
-  once installed; the React app does not. Maltrata has patchy data — this is a
-  real regression, not a nice-to-have.
+  `docs/customer-site-rework-plan.md`). Maltrata has patchy data — this is the
+  most product-relevant piece of unfinished work, not a nice-to-have.
 - **The backend stores customer PII.** Order submit is the one unauthenticated
   write endpoint; treat its rate limiting and Zod caps as load-bearing.
 - **Every admin handler must scope by `locationId`** (unless `SUPER_ADMIN`) and

@@ -46,8 +46,15 @@ export {
   orderStatusTone
 } from "./orders/status";
 
+// The orders queue and detail screens — one implementation for both apps.
+export { OrdersQueuePage } from "./orders/OrdersQueuePage";
+export { OrderDetailPage } from "./orders/OrderDetailPage";
+
 // UI primitives
 export { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "./ui/index";
 
 // Display formatting
 export { formatDate, formatDateTime, formatMoney, formatNumber } from "./format";
+
+// Timezone-aware "today" (the shop's clock, not the browser's or server's)
+export { zonedDateKey, zonedDayRange, zonedToday } from "./timezone";
