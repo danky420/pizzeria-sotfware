@@ -5,6 +5,13 @@ import { ErrorNotice, Field, Loading, PageHeader, Panel } from "@chesare/portal-
 import { SuccessNotice, Toggle } from "../../components/ui";
 import { useLocationId } from "../../state/location";
 
+// Mirrors backend/src/schemas/locations.ts's SUPPORTED_CURRENCIES. Switching
+// this relabels the location's existing prices -- it never converts them.
+const CURRENCY_OPTIONS: { value: string; label: string }[] = [
+  { value: "MXN", label: "Peso mexicano (MXN)" },
+  { value: "USD", label: "Dólar estadounidense (USD)" }
+];
+
 const EMPTY_FORM: LocationInput = {
   slug: "",
   name: "",
@@ -75,13 +82,18 @@ export function LocationPage() {
                 required
               />
             </Field>
-            <Field label="Moneda">
-              <input
+            <Field label="Moneda" hint="Cambia cómo se muestran los precios que ya existen; no los convierte.">
+              <select
                 value={form.currency}
-                onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value.toUpperCase() }))}
-                maxLength={3}
+                onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value }))}
                 required
-              />
+              >
+                {CURRENCY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Toggle
               checked={form.active}
