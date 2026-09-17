@@ -142,10 +142,11 @@ const CAFES: FlatSource[] = [
   { id: "c-cap", n: "Capuchino", p: 40 },
   { id: "c-mok", n: "Moka", p: 40 },
   { id: "c-exp", n: "Expreso", p: 30 },
-  { id: "c-ari", n: "Arizona en lata", p: 35 },
-  { id: "c-agu", n: "Botella de agua", p: null }
+  { id: "c-ari", n: "Arizona en lata", p: 35 }
 ];
 
+// Bottled water is a drink, not a coffee -- it belongs with the other cold
+// drinks in Bebidas, not tucked into the Cafés y tés subgroup.
 const REFRESCOS: FlatSource[] = [
   { id: "r-c2", n: "Coca-Cola 2 L", p: 50 },
   { id: "r-c6", n: "Coca-Cola 600 ml", p: 35 },
@@ -153,7 +154,8 @@ const REFRESCOS: FlatSource[] = [
   { id: "r-p2", n: "Pepsi 2 L", p: 45 },
   { id: "r-m2", n: "Manzanita 2 L", p: 45 },
   { id: "r-mi", n: "Mirinda 2 L", p: 45 },
-  { id: "r-40", n: "Refresco 400 ml", p: null }
+  { id: "r-40", n: "Refresco 400 ml", p: null },
+  { id: "c-agu", n: "Botella de agua", p: null }
 ];
 
 const CERVEZAS: FlatSource[] = [
