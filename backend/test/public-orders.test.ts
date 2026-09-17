@@ -243,4 +243,101 @@ describe.skipIf(!databaseReady)("public API", () => {
       expect(response.json().error.code).toBe("ITEM_UNORDERABLE");
     });
   });
+
+  describe("order tracking", () => {
+    // Seeded straight through Prisma rather than via submit(): submit is behind
+    // its own 20-per-10-minutes rate limit, shared across this whole test file,
+    // and tracking should be exercised independently of that budget.
+    let orderNumber: number;
+    let otherLocationOrderNumber: number;
+
+    beforeAll(async () => {
+      const cami = await prisma.customer.create({
+        data: { locationId: fixture.locationA.id, phone: "2725550100", name: "Cami" }
+      });
+      const order = await prisma.order.create({
+        data: {
+          locationId: fixture.locationA.id,
+          customerId: cami.id,
+          customerName: "Cami",
+          customerPhone: "272 555 0100",
+          subtotal: 30,
+          total: 30,
+          items: { create: [{ nameSnapshot: "Refresco", unitPrice: 30, quantity: 1, lineTotal: 30 }] }
+        }
+      });
+      orderNumber = order.orderNumber;
+
+      const feInOtherLocation = await prisma.customer.create({
+        data: { locationId: fixture.locationB.id, phone: "2725550103", name: "Fer" }
+      });
+      const otherOrder = await prisma.order.create({
+        data: {
+          locationId: fixture.locationB.id,
+          customerId: feInOtherLocation.id,
+          customerName: "Fer",
+          customerPhone: "272 555 0103",
+          subtotal: 30,
+          total: 30
+        }
+      });
+      otherLocationOrderNumber = otherOrder.orderNumber;
+    });
+
+    const track = (phone: string, orderNum: number | string, slug = "chesare-test") =>
+      app.inject({
+        method: "GET",
+        url: `/api/public/locations/${slug}/orders/track?phone=${encodeURIComponent(String(phone))}&orderNumber=${orderNum}`
+      });
+
+    it("finds an order by its phone number and order number", async () => {
+      const response = await track("272 555 0100", orderNumber);
+      expect(response.statusCode).toBe(200);
+      const order = response.json().order;
+      expect(order.orderNumber).toBe(orderNumber);
+      expect(order.status).toBe("PENDING");
+      expect(order.customerName).toBe("Cami");
+      expect(order.total).toBe(30);
+      expect(order.items).toEqual([
+        { name: "Refresco", size: null, style: null, option: null, quantity: 1 }
+      ]);
+      // Narrower than the authenticated order shape: no address, phone, note, ids.
+      expect(order).not.toHaveProperty("customerAddress");
+      expect(order).not.toHaveProperty("customerPhone");
+      expect(order).not.toHaveProperty("id");
+      expect(response.json().location.slug).toBe("chesare-test");
+    });
+
+    it("matches on a differently formatted phone number, same as submit", async () => {
+      const response = await track("(272) 555-0100", orderNumber);
+      expect(response.statusCode).toBe(200);
+    });
+
+    it("returns one generic not-found for a wrong phone, wrong order number, or mismatched pair", async () => {
+      const wrongPhone = await track("272 555 9999", orderNumber);
+      const wrongNumber = await track("272 555 0100", orderNumber + 999999);
+      const mismatched = await track("272 555 0103", orderNumber);
+
+      for (const response of [wrongPhone, wrongNumber, mismatched]) {
+        expect(response.statusCode).toBe(404);
+        expect(response.json().error.code).toBe("NOT_FOUND");
+      }
+    });
+
+    it("does not find another location's order", async () => {
+      const response = await track("272 555 0103", otherLocationOrderNumber, "otra-test");
+      expect(response.statusCode).toBe(200);
+
+      const wrongLocation = await track("272 555 0103", otherLocationOrderNumber, "chesare-test");
+      expect(wrongLocation.statusCode).toBe(404);
+    });
+
+    it("rejects a malformed phone or order number before hitting the database", async () => {
+      const badPhone = await track("abc", 1);
+      expect(badPhone.statusCode).toBe(400);
+
+      const badNumber = await track("272 555 0100", "not-a-number");
+      expect(badNumber.statusCode).toBe(400);
+    });
+  });
 });

@@ -61,6 +61,15 @@ export type SubmitOrderLine = SubmitOrderBody["items"][number];
 export const patchOrderStatusBody = z.object({ status: orderStatusSchema });
 export type PatchOrderStatusBody = z.infer<typeof patchOrderStatusBody>;
 
+// Public order-tracking lookup: phone + order number together, never phone
+// alone — see docs/order-tracking-plan.md. orderNumber arrives as a query
+// string, hence coerce.
+export const trackOrderQuery = z.object({
+  phone: phoneSchema,
+  orderNumber: z.coerce.number().int().positive()
+});
+export type TrackOrderQuery = z.infer<typeof trackOrderQuery>;
+
 /**
  * Admin-side order listing. `from`/`to` bound `createdAt`; `to` is treated as
  * inclusive by the handler so a caller can pass a plain date without losing that
