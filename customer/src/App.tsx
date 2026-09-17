@@ -2,6 +2,7 @@ import { Fragment, type JSX, useCallback, useEffect, useMemo, useRef, useState }
 import { API_READY, fetchHours, fetchMenu } from "./api/client";
 import type { HoursResponse, MenuCategory, MenuItem, MenuResponse } from "./api/types";
 import { CartSheet, type Sugerencia } from "./components/CartSheet";
+import { IcCarrito, IcChevron, IcPin } from "./components/icons";
 import { MenuSections } from "./components/MenuSections";
 import { ProductSheet, type ProductSelection } from "./components/ProductSheet";
 import { useCart } from "./lib/cart";
@@ -168,27 +169,31 @@ export function App(): JSX.Element {
   return (
     <>
       <header className="cab">
-        <div className="w hero-fila">
-          <img className="marca" src="/marca.webp" alt="Pizza's Chesa're" width={520} height={499} />
-          <div className="hero-texto">
-            <h1>Pizza's Chesa're</h1>
-            <p className="hero-tag">Pizza de horno, hecha en Maltrata.</p>
+        <div className="w">
+          <div className="hero-fila">
+            <img className="marca" src="/marca.webp" alt="Pizza's Chesa're" width={520} height={499} />
+            <div className="hero-texto">
+              <h1>Pizza's Chesa're</h1>
+              <p className="hero-tag">Pizza de horno, hecha en Maltrata.</p>
+            </div>
           </div>
-        </div>
-        <div className="w cab-sub">
-          <span className={estado?.open === false ? "estado off" : "estado"}>
-            <i className="punto" />
-            <span>
-              {estado
-                ? estado.open
-                  ? `Abierto ahora. Cerramos ${estado.detalle.replace(/^cierra /, "a las ")}.`
-                  : estado.detalle
-                    ? `Cerrado. ${estado.detalle.replace(/^abre /, "Abrimos ")}.`
-                    : "Cerrado por ahora."
-                : "Consultando horario…"}
+          <div className="cab-info">
+            <span className={estado?.open === false ? "estado off" : "estado"}>
+              <i className="punto" />
+              <span>
+                {estado
+                  ? estado.open
+                    ? `Abierto ahora. Cerramos ${estado.detalle.replace(/^cierra /, "a las ")}.`
+                    : estado.detalle
+                      ? `Cerrado. ${estado.detalle.replace(/^abre /, "Abrimos ")}.`
+                      : "Cerrado por ahora."
+                  : "Consultando horario…"}
+              </span>
             </span>
-          </span>
-          <p className="dir">Av. Ignacio Zaragoza, Manzana 1, Maltrata, Veracruz</p>
+            <p className="dir">
+              <IcPin /> Av. Ignacio Zaragoza, Manzana 1, Maltrata, Veracruz
+            </p>
+          </div>
         </div>
       </header>
 
@@ -276,24 +281,24 @@ export function App(): JSX.Element {
       </footer>
 
       <div className={cart.pieces > 0 ? "barra on" : "barra"}>
-        <div className="barra-in">
-          <div className="c">
-            <b>{mx(cart.total)}</b>
-            <span>
-              {cart.pieces} producto{cart.pieces === 1 ? "" : "s"}
-            </span>
-          </div>
-          <button
-            className="btn btn-wa"
-            type="button"
-            onClick={() => {
-              focoPrevio.current = document.activeElement as HTMLElement | null;
-              setCarroAbierto(true);
-            }}
-          >
-            Ver pedido
-          </button>
-        </div>
+        <button
+          className="barra-in"
+          type="button"
+          aria-label={`Ver pedido: ${cart.pieces} producto${cart.pieces === 1 ? "" : "s"}, ${mx(cart.total)}`}
+          onClick={() => {
+            focoPrevio.current = document.activeElement as HTMLElement | null;
+            setCarroAbierto(true);
+          }}
+        >
+          <span className="barra-icono">
+            <IcCarrito />
+            <span className="barra-cuenta">{cart.pieces}</span>
+          </span>
+          <b>{mx(cart.total)}</b>
+          <span className="cheq" aria-hidden="true">
+            <IcChevron size={18} />
+          </span>
+        </button>
       </div>
 
       <div className={abierta ? "fondo on" : "fondo"} onClick={cerrarTodo} />

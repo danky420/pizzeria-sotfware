@@ -18,8 +18,6 @@ import {
  * renders without them.
  */
 const SECTION_COPY: Record<string, { intro?: string; nota?: string }> = {
-  pizzas: { intro: "Elige tu pizza." },
-  alitas: { intro: "Elige tu salsa favorita. Las combinaciones especiales cuestan un poco más." },
   pastas: { nota: "Lasaña por pedido especial. Pregunta al ordenar." }
 };
 
@@ -63,6 +61,27 @@ export function itemIcon(categorySlug: string, item: MenuItem): JSX.Element {
       return item.ageRestricted ? <IcLata /> : <IcBotella />;
     default:
       return <IcPizza tops={item.toppingColors} />;
+  }
+}
+
+/** One representative icon per top-level category, for the section heading —
+ * distinct from `itemIcon`, which varies per row/card within a section. */
+export function sectionIcon(categorySlug: string): JSX.Element {
+  switch (categorySlug) {
+    case "hamburguesas":
+      return <IcBurger />;
+    case "alitas":
+      return <IcWing />;
+    case "pastas":
+      return <IcPasta />;
+    case "postres":
+      return <IcDulce />;
+    case "frappes":
+      return <IcFrappe />;
+    case "bebidas":
+      return <IcBotella />;
+    default:
+      return <IcPizza tops={["#C7342A", "#F2C93B", "#6E9B3C"]} />;
   }
 }
 
