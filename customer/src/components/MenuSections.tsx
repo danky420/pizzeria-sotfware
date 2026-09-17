@@ -13,7 +13,6 @@ import {
 interface Props {
   sections: Section[];
   onOpen: (category: MenuCategory, item: MenuItem) => void;
-  onQuickAdd: (category: MenuCategory, item: MenuItem) => void;
 }
 
 interface Etiqueta {
@@ -77,15 +76,15 @@ function Card({
 function Row({
   category,
   item,
-  onAdd
+  onOpen
 }: {
   category: MenuCategory;
   item: MenuItem;
-  onAdd: () => void;
+  onOpen: () => void;
 }): JSX.Element {
   const sin = item.flatPrice === null;
   return (
-    <button className="li" type="button" disabled={sin} onClick={onAdd}>
+    <button className="li" type="button" disabled={sin} onClick={onOpen}>
       <span className="ic">{itemIcon(category.slug, item)}</span>
       <span className="n">
         {item.name}
@@ -94,9 +93,6 @@ function Row({
       <span className={sin ? "p na" : "p"}>
         {sin ? "Pregunta el precio" : mx(item.flatPrice ?? 0)}
       </span>
-      <span className="mas" aria-hidden="true">
-        +
-      </span>
     </button>
   );
 }
@@ -104,13 +100,11 @@ function Row({
 function BlockView({
   block,
   category,
-  onOpen,
-  onQuickAdd
+  onOpen
 }: {
   block: Block;
   category: MenuCategory;
   onOpen: (item: MenuItem) => void;
-  onQuickAdd: (item: MenuItem) => void;
 }): JSX.Element {
   return (
     <>
@@ -129,7 +123,7 @@ function BlockView({
       ) : (
         <div className="lista">
           {block.items.map((item) => (
-            <Row key={item.id} category={category} item={item} onAdd={() => onQuickAdd(item)} />
+            <Row key={item.id} category={category} item={item} onOpen={() => onOpen(item)} />
           ))}
         </div>
       )}
@@ -137,7 +131,7 @@ function BlockView({
   );
 }
 
-export function MenuSections({ sections, onOpen, onQuickAdd }: Props): JSX.Element {
+export function MenuSections({ sections, onOpen }: Props): JSX.Element {
   return (
     <>
       {sections.map((section) => (
@@ -153,7 +147,6 @@ export function MenuSections({ sections, onOpen, onQuickAdd }: Props): JSX.Eleme
               block={block}
               category={section.category}
               onOpen={(item) => onOpen(section.category, item)}
-              onQuickAdd={(item) => onQuickAdd(section.category, item)}
             />
           ))}
           {section.nota ? (

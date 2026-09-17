@@ -81,17 +81,6 @@ export function App(): JSX.Element {
     focoPrevio.current?.focus();
   }, []);
 
-  const agregarRapido = useCallback(
-    (category: MenuCategory, item: MenuItem) => {
-      if (item.flatPrice === null) return;
-      cart.add(cartName(category.slug, item), item.flatPrice, 1, "", {
-        itemSlug: item.slug,
-        categorySlug: category.slug
-      });
-    },
-    [cart]
-  );
-
   const sugerencias = useMemo<Sugerencia[]>(() => {
     if (!menu) return [];
     return SUGERENCIAS.flatMap((wanted) => {
@@ -236,7 +225,7 @@ export function App(): JSX.Element {
             </button>
           </div>
         ) : null}
-        <MenuSections sections={sections} onOpen={abrirHoja} onQuickAdd={agregarRapido} />
+        <MenuSections sections={sections} onOpen={abrirHoja} />
       </main>
 
       <footer className="w">
