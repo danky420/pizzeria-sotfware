@@ -56,6 +56,14 @@ export type CreateCategoryBody = z.infer<typeof createCategoryBody>;
 export const updateCategoryBody = createCategoryBody.partial();
 export type UpdateCategoryBody = z.infer<typeof updateCategoryBody>;
 
+// Every category id for one location, in the new display order -- sortOrder
+// becomes each id's index. Capped generously above any real menu's category
+// count, just to bound the transaction size.
+export const reorderCategoriesBody = z.object({
+  categoryIds: z.array(idSchema).min(1).max(200)
+});
+export type ReorderCategoriesBody = z.infer<typeof reorderCategoriesBody>;
+
 export const createSizeOptionBody = z.object({
   slug: slugSchema,
   name: nameSchema,

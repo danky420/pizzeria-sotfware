@@ -100,6 +100,9 @@ export const menuApi = {
   updateCategory: (id: string, input: Partial<CategoryInput>) =>
     api.patch<{ category: MenuCategory }>(`/menu/categories/${id}`, input),
   removeCategory: (id: string) => api.del<{ ok: true }>(`/menu/categories/${id}`),
+  // categoryIds in the new display order -- sortOrder becomes each id's index.
+  reorderCategories: (locationId: string, categoryIds: string[]) =>
+    api.put<{ categories: MenuCategory[] }>(`/locations/${locationId}/menu/categories/reorder`, { categoryIds }),
   // Not through portal-shared's `api` helper: that always JSON-encodes the
   // body, and a file upload needs multipart/form-data -- same pattern as
   // locationsApi.uploadLogo.

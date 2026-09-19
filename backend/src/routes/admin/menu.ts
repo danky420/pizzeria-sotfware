@@ -35,6 +35,7 @@ import {
   patchItemAvailabilityBody,
   patchItemPriceBody,
   putPriceMatrixBody,
+  reorderCategoriesBody,
   updateCategoryBody,
   updateChoiceBody,
   updateItemBody,
@@ -84,6 +85,36 @@ export default async function adminMenuRoutes(app: FastifyInstance): Promise<voi
   app.get("/locations/:id/menu/categories", async (request) => {
     const { id } = idParams.parse(request.params);
     await loadLocation(request, id);
+    const categories = await prisma.menuCategory.findMany({
+      where: { locationId: id },
+      orderBy: { sortOrder: "asc" }
+    });
+    return { categories: categories.map(presentCategory) };
+  });
+
+  // One call, not one PATCH per dragged category: sortOrder becomes each id's
+  // index in the array. Rejects outright if the array doesn't name exactly
+  // this location's own categories -- a partial list would silently collapse
+  // the missing ones onto whatever sortOrder they already had, interleaving
+  // unpredictably with the ones that did move.
+  app.put("/locations/:id/menu/categories/reorder", async (request) => {
+    const { id } = idParams.parse(request.params);
+    await loadLocation(request, id);
+    const body = reorderCategoriesBody.parse(request.body);
+
+    const existing = await prisma.menuCategory.findMany({ where: { locationId: id }, select: { id: true } });
+    const existingIds = new Set(existing.map((category) => category.id));
+    const bodyIds = new Set(body.categoryIds);
+    if (existingIds.size !== bodyIds.size || [...existingIds].some((categoryId) => !bodyIds.has(categoryId))) {
+      throw badRequest("categoryIds must list exactly this location's own categories, each once");
+    }
+
+    await prisma.$transaction(
+      body.categoryIds.map((categoryId, sortOrder) =>
+        prisma.menuCategory.update({ where: { id: categoryId }, data: { sortOrder } })
+      )
+    );
+
     const categories = await prisma.menuCategory.findMany({
       where: { locationId: id },
       orderBy: { sortOrder: "asc" }

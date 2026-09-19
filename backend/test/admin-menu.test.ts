@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
-import { disconnectPrisma } from "../src/db/prisma.js";
+import { disconnectPrisma, prisma } from "../src/db/prisma.js";
 import { type Fixture, databaseReady, login, resetDatabase, seedFixture } from "./helpers/db.js";
 
 describe.skipIf(!databaseReady)("admin menu management", () => {
@@ -141,5 +141,75 @@ describe.skipIf(!databaseReady)("admin menu management", () => {
       days: [{ dayOfWeek: 2, opensAt: 1380, closesAt: 1050 }]
     });
     expect(invalid.statusCode).toBe(400);
+  });
+
+  describe("reordering categories", () => {
+    it("reverses the category order in one call and the public menu reflects it", async () => {
+      // Whatever categories exist by this point in the file (pizzas, bebidas,
+      // and any created by earlier tests above) -- reversing them is a change
+      // regardless of the exact starting set, so this doesn't need to assume one.
+      const before = await prisma.menuCategory.findMany({
+        where: { locationId: fixture.locationA.id },
+        orderBy: { sortOrder: "asc" }
+      });
+      const reversed = [...before].reverse().map((category) => category.id);
+
+      const response = await call(
+        "PUT",
+        `/api/admin/locations/${fixture.locationA.id}/menu/categories/reorder`,
+        { categoryIds: reversed }
+      );
+      expect(response.statusCode).toBe(200);
+      expect(response.json().categories.map((category: { id: string }) => category.id)).toEqual(reversed);
+
+      const publicMenu = await app.inject({
+        method: "GET",
+        url: `/api/public/locations/${fixture.locationA.slug}/menu`
+      });
+      expect(publicMenu.json().categories.map((category: { id: string }) => category.id)).toEqual(reversed);
+
+      // Restore the original order so later tests in this file (and their
+      // assumptions about which category comes first) aren't affected.
+      await call("PUT", `/api/admin/locations/${fixture.locationA.id}/menu/categories/reorder`, {
+        categoryIds: before.map((category) => category.id)
+      });
+    });
+
+    it("rejects a list missing one of the location's categories", async () => {
+      const categories = await prisma.menuCategory.findMany({ where: { locationId: fixture.locationA.id } });
+      const response = await call(
+        "PUT",
+        `/api/admin/locations/${fixture.locationA.id}/menu/categories/reorder`,
+        { categoryIds: [categories[0].id] }
+      );
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects a list with a wrong id swapped in for a real one", async () => {
+      // Same length as the real set, so the earlier "missing one" check alone
+      // wouldn't catch this -- one of the ids just isn't a real category here.
+      const categories = await prisma.menuCategory.findMany({ where: { locationId: fixture.locationA.id } });
+      const attempted = categories.map((category) => category.id);
+      attempted[0] = "not-a-real-category-id";
+
+      const response = await call(
+        "PUT",
+        `/api/admin/locations/${fixture.locationA.id}/menu/categories/reorder`,
+        { categoryIds: attempted }
+      );
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("refuses to reorder another location's categories", async () => {
+      const ownerB = await login(app, "owner@b.test");
+      const categories = await prisma.menuCategory.findMany({ where: { locationId: fixture.locationA.id } });
+      const response = await app.inject({
+        method: "PUT",
+        url: `/api/admin/locations/${fixture.locationA.id}/menu/categories/reorder`,
+        headers: { cookie: ownerB },
+        payload: { categoryIds: categories.map((category) => category.id) }
+      });
+      expect(response.statusCode).toBe(403);
+    });
   });
 });

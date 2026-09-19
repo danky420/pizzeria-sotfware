@@ -1,8 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { menuApi } from "../../api/menu";
-import { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "@chesare/portal-shared";
+import {
+  Badge,
+  EmptyState,
+  ErrorNotice,
+  Field,
+  Loading,
+  PageHeader,
+  Panel,
+  type MenuCategoryTree
+} from "@chesare/portal-shared";
 import { slugify } from "../../lib/format";
 import { useLocationId } from "../../state/location";
 
@@ -16,6 +25,68 @@ export function MenuPage() {
     queryKey: ["menu", "tree", locationId],
     queryFn: () => menuApi.tree(locationId).then((response) => response.categories)
   });
+
+  // Local, reorderable copy of the list: dragging needs to move rows live,
+  // well before the reorder call round-trips, and the server's reorder
+  // response is deliberately the thin presentCategory() shape (no items),
+  // not this page's richer tree data -- so on success this re-syncs from a
+  // refetch instead of overwriting the query cache with a shape that would
+  // break the "productos"/"sin precio" columns below.
+  const [categories, setCategories] = useState<MenuCategoryTree[]>([]);
+  const draggingId = useRef<string | null>(null);
+  const [draggingOverId, setDraggingOverId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (menu.data && draggingId.current === null) setCategories(menu.data);
+  }, [menu.data]);
+
+  const reorder = useMutation({
+    mutationFn: (categoryIds: string[]) => menuApi.reorderCategories(locationId, categoryIds),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["menu", "tree", locationId] }),
+    onError: () => {
+      if (menu.data) setCategories(menu.data);
+    }
+  });
+
+  function moveCategory(id: string, direction: -1 | 1) {
+    setCategories((current) => {
+      const index = current.findIndex((category) => category.id === id);
+      const target = index + direction;
+      if (index === -1 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      // Bounds already checked above, so both indices are real entries.
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      reorder.mutate(next.map((category) => category.id));
+      return next;
+    });
+  }
+
+  function onRowDragStart(id: string) {
+    draggingId.current = id;
+  }
+
+  function onRowDragOver(event: DragEvent, overId: string) {
+    event.preventDefault();
+    setDraggingOverId(overId);
+    const fromId = draggingId.current;
+    if (!fromId || fromId === overId) return;
+    setCategories((current) => {
+      const fromIndex = current.findIndex((category) => category.id === fromId);
+      const toIndex = current.findIndex((category) => category.id === overId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return current;
+      const next = [...current];
+      // fromIndex was already confirmed a real entry above.
+      const [moved] = next.splice(fromIndex, 1) as [MenuCategoryTree];
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function onRowDragEnd() {
+    if (draggingId.current) reorder.mutate(categories.map((category) => category.id));
+    draggingId.current = null;
+    setDraggingOverId(null);
+  }
 
   const createCategory = useMutation({
     mutationFn: () =>
@@ -78,10 +149,15 @@ export function MenuPage() {
 
       {menu.data && menu.data.length > 0 ? (
         <Panel>
+          <p className="field-hint">
+            Arrastra una fila (o usa las flechas) para cambiar el orden en que aparecen en el sitio del cliente.
+          </p>
+          <ErrorNotice error={reorder.error} title="No se pudo guardar el nuevo orden" />
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th />
                   <th>Categoría</th>
                   <th>Clave</th>
                   <th className="right">Productos</th>
@@ -91,7 +167,7 @@ export function MenuPage() {
                 </tr>
               </thead>
               <tbody>
-                {menu.data.map((category) => {
+                {categories.map((category, index) => {
                   const unpriced = category.items.filter((item) =>
                     item.itemType === "FLAT"
                       ? item.flatPrice === null
@@ -99,7 +175,40 @@ export function MenuPage() {
                   ).length;
 
                   return (
-                    <tr key={category.id}>
+                    <tr
+                      key={category.id}
+                      draggable
+                      onDragStart={() => onRowDragStart(category.id)}
+                      onDragOver={(event) => onRowDragOver(event, category.id)}
+                      onDrop={(event) => event.preventDefault()}
+                      onDragEnd={onRowDragEnd}
+                      className={draggingOverId === category.id ? "row-drag-over" : undefined}
+                    >
+                      <td className="drag-handle-cell">
+                        <span className="drag-handle" aria-hidden="true" title="Arrastra para reordenar">
+                          ⠿
+                        </span>
+                        <div className="reorder-buttons">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-quiet"
+                            aria-label={`Mover «${category.name}» arriba`}
+                            disabled={index === 0 || reorder.isPending}
+                            onClick={() => moveCategory(category.id, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-quiet"
+                            aria-label={`Mover «${category.name}» abajo`}
+                            disabled={index === categories.length - 1 || reorder.isPending}
+                            onClick={() => moveCategory(category.id, 1)}
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      </td>
                       <td>
                         <Link to={`/menu/${category.id}`}>{category.name}</Link>
                         {category.description ? (
