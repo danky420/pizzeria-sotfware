@@ -51,6 +51,7 @@ export function App(): JSX.Element {
   const hojaRef = useRef<HTMLDivElement>(null);
   const carroRef = useRef<HTMLDivElement>(null);
   const focoPrevio = useRef<HTMLElement | null>(null);
+  const navRef = useRef<HTMLDivElement>(null);
 
   const tick = useTick(60000);
 
@@ -216,6 +217,15 @@ export function App(): JSX.Element {
     return () => observer.disconnect();
   }, [sections]);
 
+  // The nav strip scrolls horizontally on its own (more categories than fit
+  // on screen) -- without this, scrolling the page changes which category is
+  // "on" but the highlighted link can end up off to the side, out of view.
+  useEffect(() => {
+    if (!activa) return;
+    const link = navRef.current?.querySelector<HTMLAnchorElement>(`a[href="#${activa}"]`);
+    link?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [activa]);
+
   return (
     <>
       <header className="cab">
@@ -259,7 +269,7 @@ export function App(): JSX.Element {
       ) : null}
 
       <nav className="nav" aria-label="Secciones del menú">
-        <div className="nav-in">
+        <div className="nav-in" ref={navRef}>
           {sections.map((section) => (
             <a
               key={section.id}
