@@ -117,11 +117,23 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.setNotFoundHandler((request, reply) => {
     if (request.method === "GET" && !request.url.startsWith("/api/")) {
+      const [path = "", query] = request.url.split("?");
       const spa = spaFor(request.url);
-      // A missing hashed asset is a genuine 404, not a client-side route —
-      // serving index.html there would hand the browser HTML labelled as JS.
-      if (spa && !/\.[a-z0-9]+$/i.test(request.url.split("?")[0] ?? "")) {
-        return reply.sendFile("index.html", spa.root);
+      if (spa) {
+        // A bare "/admin" (no trailing slash) would serve index.html at that
+        // exact URL, but the app's basename is "/admin/" (from Vite's
+        // base) — React Router requires the pathname to start with the
+        // basename, and "/admin" doesn't, so it never matches a route and
+        // renders nothing. Redirect to add the slash first, same as a
+        // directory index normally would.
+        if (spa.prefix !== "/" && path === spa.prefix) {
+          return reply.redirect(`${spa.prefix}/${query ? `?${query}` : ""}`, 308);
+        }
+        // A missing hashed asset is a genuine 404, not a client-side route —
+        // serving index.html there would hand the browser HTML labelled as JS.
+        if (!/\.[a-z0-9]+$/i.test(path)) {
+          return reply.sendFile("index.html", spa.root);
+        }
       }
     }
     return reply.status(404).send({ error: { code: "NOT_FOUND", message: "Not found" } });
