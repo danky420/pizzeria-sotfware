@@ -458,20 +458,25 @@ textarea {
   min-width: 0;
 }
 
-/* Found via an on-page readout of real computed styles on the reporter's
-   iPhone (this sandbox has no WebKit to test against): Safari renders these
-   with box-sizing: content-box despite the universal `* { box-sizing:
-   border-box }` reset above -- a known WebKit quirk where the UA stylesheet
-   for native date/time controls can outrank an author reset applied only
-   through the universal selector. With content-box, this rule's own
-   padding (7px 9px) and border (1px) get added ON TOP of the 100% width
-   instead of being carved out of it, which is exactly what was pushing
-   these past their container. Naming the property directly on the
-   selector, rather than through `*`, is what makes it win. */
+/* Confirmed via an on-page readout of real computed styles on the reporter's
+   iPhone (this sandbox has no WebKit to test against): these render with
+   box-sizing: content-box, adding this rule's own padding (7px 9px, so 18px
+   horizontal) and border (1px each side, so 2px) ON TOP of the 100% width
+   instead of carving it out -- exactly the 20px these were overflowing by.
+   Setting box-sizing: border-box directly on the selector did NOT change
+   the reported computed value on a real retest (confirmed cache was
+   cleared) -- WebKit is not honoring an author box-sizing override on this
+   control's native-appearance rendering at all, for reasons that aren't
+   visible from here. Rather than keep fighting that, subtract the same
+   20px from the specified width directly, so the resulting box lands at
+   100% either way: under content-box (what's actually happening) content
+   + 20px padding/border = 100%; under border-box (if some future WebKit
+   version actually honors it) the box is 20px narrower than it could be,
+   which is a cosmetic issue, not an overflow. */
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
-  box-sizing: border-box;
+  width: calc(100% - 20px);
   overflow: hidden;
 }
 
