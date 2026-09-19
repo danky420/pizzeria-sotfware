@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { EmptyState, ErrorNotice, Loading, useAuth } from "@chesare/portal-shared";
 import { ActiveLocationProvider, useActiveLocation } from "../state/location";
@@ -20,12 +21,20 @@ function Shell() {
   const { user, logout } = useAuth();
   const { location, locations, canSwitch, setLocationId, isLoading, error } = useActiveLocation();
 
+  // Tenant name/logo only -- the palette around it stays this app's own fixed,
+  // neutral one for every tenant (docs/multi-tenant-branding-plan.md).
+  useEffect(() => {
+    if (location) document.title = `${location.name} · Administración`;
+  }, [location]);
+
   return (
     <div className="shell">
       <header className="shell-top">
         <div className="brand">
-          <img className="brand-mark" src="/marca.webp" alt="" width={32} height={32} />
-          <span className="brand-word">Chesa're</span>
+          {location?.logoUrl ? (
+            <img className="brand-mark" src={location.logoUrl} alt="" width={32} height={32} />
+          ) : null}
+          <span className="brand-word">{location?.name ?? ""}</span>
         </div>
 
         <nav className="shell-nav">

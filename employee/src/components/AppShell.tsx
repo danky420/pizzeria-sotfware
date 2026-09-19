@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { EmptyState, useAuth } from "@chesare/portal-shared";
 
@@ -16,12 +17,20 @@ import { EmptyState, useAuth } from "@chesare/portal-shared";
 export function AppShell() {
   const { user, location, logout } = useAuth();
 
+  // Tenant name/logo only -- same neutral-palette rule as admin/'s AppShell
+  // (docs/multi-tenant-branding-plan.md).
+  useEffect(() => {
+    if (location) document.title = `${location.name} · Pedidos`;
+  }, [location]);
+
   return (
     <div className="shell">
       <header className="shell-top">
         <div className="brand">
-          <img className="brand-mark" src="/marca.webp" alt="" width={32} height={32} />
-          <span className="brand-word">Chesa're</span>
+          {location?.logoUrl ? (
+            <img className="brand-mark" src={location.logoUrl} alt="" width={32} height={32} />
+          ) : null}
+          <span className="brand-word">{location?.name ?? ""}</span>
         </div>
 
         <div className="shell-user">

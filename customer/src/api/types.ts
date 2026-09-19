@@ -16,6 +16,9 @@ export interface PublicLocation {
   waNumber: string | null;
   timezone: string;
   currency: string;
+  addressText: string | null;
+  colorScheme: string;
+  logoUrl: string | null;
   active: boolean;
 }
 

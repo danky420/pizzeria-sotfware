@@ -5,10 +5,17 @@ import { CartSheet, type Sugerencia } from "./components/CartSheet";
 import { IcCarrito, IcChevron, IcPin } from "./components/icons";
 import { MenuSections } from "./components/MenuSections";
 import { ProductSheet, type ProductSelection } from "./components/ProductSheet";
+import { applyColorScheme, cacheBranding, readCachedBranding } from "./lib/branding";
 import { useCart } from "./lib/cart";
-import { configureCurrency, hhmm, mx, nombreDia } from "./lib/format";
+import { configureCurrency, formatPhone, hhmm, mx, nombreDia, telHref } from "./lib/format";
 import { shopStatus } from "./lib/hours";
 import { buildSections, cartName, choicePrice, singleChoiceGroup } from "./lib/menu";
+
+/** Seeded default so the very first paint of a cold browser (no cache yet)
+ *  still shows Chesa're's real name instead of going blank -- same principle
+ *  as index.html's static <title>. Once the menu fetch resolves, or a cached
+ *  branding value exists, that always wins. */
+const DEFAULT_NAME = "Pizza's Chesa're";
 
 /** Add-ons offered in the cart, resolved against the live menu; a slug the shop
  *  retires simply stops being offered instead of breaking the row. */
@@ -47,6 +54,11 @@ export function App(): JSX.Element {
 
   const tick = useTick(60000);
 
+  // Read once: this only seeds the very first render before the fetch below
+  // resolves, so it deliberately isn't kept in sync afterwards -- `menu.location`
+  // takes over once it lands.
+  const cachedBranding = useRef(readCachedBranding()).current;
+
   useEffect(() => {
     const control = new AbortController();
     setCargando(true);
@@ -54,7 +66,15 @@ export function App(): JSX.Element {
 
     Promise.all([fetchMenu(control.signal), fetchHours(control.signal)])
       .then(([menuResponse, hoursResponse]) => {
-        configureCurrency(menuResponse.location.currency);
+        const { location } = menuResponse;
+        configureCurrency(location.currency);
+        applyColorScheme(location.colorScheme);
+        cacheBranding({
+          name: location.name,
+          colorScheme: location.colorScheme,
+          logoUrl: location.logoUrl,
+          waNumber: location.waNumber
+        });
         setMenu(menuResponse);
         setHours(hoursResponse);
         setCargando(false);
@@ -67,6 +87,25 @@ export function App(): JSX.Element {
 
     return () => control.abort();
   }, [intento]);
+
+  const location = menu?.location ?? null;
+  const brandName = location?.name ?? cachedBranding?.name ?? DEFAULT_NAME;
+  const logoUrl = location?.logoUrl ?? cachedBranding?.logoUrl ?? null;
+  const failoverWaNumber = location?.waNumber ?? cachedBranding?.waNumber ?? null;
+
+  // The <title> and description can't be templated server-side (no SSR here),
+  // so the seeded defaults in index.html hold until this runs -- see
+  // docs/multi-tenant-branding-plan.md.
+  useEffect(() => {
+    if (!location) return;
+    document.title = location.name;
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute(
+        "content",
+        `Pide en línea en ${location.name}${location.addressText ? ` — ${location.addressText}` : ""}.`
+      );
+  }, [location]);
 
   const sections = useMemo(() => (menu ? buildSections(menu.categories) : []), [menu]);
   const estado = useMemo(() => (hours ? shopStatus(hours) : null), [hours, tick]);
@@ -171,9 +210,11 @@ export function App(): JSX.Element {
       <header className="cab">
         <div className="w">
           <div className="hero-fila">
-            <img className="marca" src="/marca.webp" alt="Pizza's Chesa're" width={520} height={499} />
+            {logoUrl ? (
+              <img className="marca" src={logoUrl} alt={brandName} width={520} height={499} />
+            ) : null}
             <div className="hero-texto">
-              <h1>Pizza's Chesa're</h1>
+              <h1>{brandName}</h1>
               <p className="hero-tag">Pizza de horno, hecha en Maltrata.</p>
             </div>
           </div>
@@ -190,9 +231,11 @@ export function App(): JSX.Element {
                   : "Consultando horario…"}
               </span>
             </span>
-            <p className="dir">
-              <IcPin /> Av. Ignacio Zaragoza, Manzana 1, Maltrata, Veracruz
-            </p>
+            {location?.addressText ? (
+              <p className="dir">
+                <IcPin /> {location.addressText}
+              </p>
+            ) : null}
           </div>
         </div>
       </header>
@@ -223,8 +266,13 @@ export function App(): JSX.Element {
         {fallo ? (
           <div className="fallo">
             <b>No pudimos cargar el menú.</b>
-            Revisa tu conexión e inténtalo de nuevo, o llámanos al{" "}
-            <a href="tel:+522722603537">272 260 3537</a>.
+            Revisa tu conexión e inténtalo de nuevo
+            {failoverWaNumber ? (
+              <>
+                , o llámanos al <a href={telHref(failoverWaNumber)}>{formatPhone(failoverWaNumber)}</a>
+              </>
+            ) : null}
+            .
             <br />
             <button className="btn" type="button" onClick={() => setIntento((n) => n + 1)}>
               Reintentar
@@ -253,12 +301,18 @@ export function App(): JSX.Element {
             );
           })}
         </div>
-        <p>
-          Av. Ignacio Zaragoza S/N, Manzana 1, 94700 Maltrata, Veracruz.
-          <br />
-          Pedidos al <a href="tel:+522722603537">272 260 3537</a> y{" "}
-          <a href="tel:+522721005211">272 100 5211</a>.
-        </p>
+        {location ? (
+          <p>
+            {location.addressText}
+            {location.addressText ? "." : null}
+            <br />
+            {location.waNumber ? (
+              <>
+                Pedidos al <a href={telHref(location.waNumber)}>{formatPhone(location.waNumber)}</a>.
+              </>
+            ) : null}
+          </p>
+        ) : null}
         <p>Venta de cerveza únicamente a mayores de 18 años.</p>
         <div className="demo">
           <strong>Versión de prueba.</strong> Los platillos y precios se tomaron del menú impreso de

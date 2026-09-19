@@ -51,22 +51,49 @@ enum PromotionScope {
 }
 
 model Location {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  name      String
-  waNumber  String
-  timezone  String   @default("America/Mexico_City")
-  currency  String   @default("MXN")
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  waNumber    String
+  timezone    String   @default("America/Mexico_City")
+  currency    String   @default("MXN")
+  active      Boolean  @default(true)
+  addressText String?
+  // Validated server-side against SUPPORTED_COLOR_SCHEMES (backend/src/schemas/
+  // locations.ts) -- a free string here, not an enum, so adding or renaming a
+  // scheme never needs a migration.
+  colorScheme String   @default("rojo-clasico")
+  logoAssetId String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
+  logoAsset     LocationAsset?  @relation("LocationLogo", fields: [logoAssetId], references: [id])
+  assets        LocationAsset[] @relation("LocationAssetOwner")
   businessHours BusinessHours[]
   adminUsers    AdminUser[]
   categories    MenuCategory[]
   promotions    Promotion[]
   customers     Customer[]
   orders        Order[]
+}
+
+// One row per upload, never mutated in place -- a new logo creates a new row
+// and repoints Location.logoAssetId, so a given id's bytes never change and
+// the public serving route can cache them forever (see docs/
+// multi-tenant-branding-plan.md). Orphaned rows (no Location pointing at them
+// any more) are left alone; that cleanup isn't worth it yet.
+model LocationAsset {
+  id         String   @id @default(cuid())
+  locationId String
+  mimeType   String
+  data       Bytes
+  size       Int
+  createdAt  DateTime @default(now())
+
+  location     Location  @relation("LocationAssetOwner", fields: [locationId], references: [id], onDelete: Cascade)
+  logoFor      Location? @relation("LocationLogo")
+
+  @@index([locationId])
 }
 
 model BusinessHours {

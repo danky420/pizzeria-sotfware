@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Seeded defaults for Chesa're. App.tsx overwrites both once the location
+     fetch resolves (document.title and this meta's content), so a returning
+     visitor sees the right tenant almost immediately -- but the very first
+     paint, and whatever a crawler indexes, still reads these seeded values.
+     See docs/multi-tenant-branding-plan.md. -->
 <title>Pizza's Chesa're — Maltrata, Veracruz</title>
 <meta name="description" content="Pizzas, alitas, hamburguesas y pastas en Maltrata, Veracruz. Pide en línea o llámanos al 272 260 3537.">
 <meta name="theme-color" content="#D22B27" media="(prefers-color-scheme: light)">
@@ -19,6 +24,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bevan&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Avoids a flash of the wrong color scheme for a returning visitor: reads the
+  // branding cache App.tsx writes after every successful menu fetch and sets
+  // data-scheme before first paint. Must run before #root so the CSS custom
+  // properties in styles.css are already right when React mounts. Key literal
+  // must match BRANDING_CACHE_KEY in src/lib/branding.ts -- this script can't
+  // import that module. See docs/multi-tenant-branding-plan.md.
+  (function () {
+    try {
+      var raw = window.localStorage.getItem("branding-cache-v1");
+      if (!raw) return;
+      var cached = JSON.parse(raw);
+      if (cached && typeof cached.colorScheme === "string") {
+        document.documentElement.setAttribute("data-scheme", cached.colorScheme);
+      }
+    } catch (e) {
+      // No cache, blocked storage, or bad JSON -- fall through to the default
+      // scheme until the real fetch resolves.
+    }
+  })();
+</script>
 </head>
 <body>
 <div id="root"></div>

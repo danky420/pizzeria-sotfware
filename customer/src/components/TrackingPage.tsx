@@ -1,9 +1,12 @@
 import { type FormEvent, type JSX, useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, trackOrder } from "../api/client";
-import { MAX_PHONE_LENGTH, type TrackOrderResponse } from "../api/types";
+import { ApiError, fetchLocation, trackOrder } from "../api/client";
+import { MAX_PHONE_LENGTH, type PublicLocation, type TrackOrderResponse } from "../api/types";
 import { IcPizza } from "./icons";
+import { applyColorScheme, cacheBranding, readCachedBranding } from "../lib/branding";
 import { configureCurrency, mx } from "../lib/format";
 import { FULFILLMENT_LABELS, ORDER_STATUS_LABELS, STATUS_HELP, TRACKING_STEPS } from "../lib/orderStatus";
+
+const DEFAULT_NAME = "Pizza's Chesa're";
 
 const POLL_MS = 8000;
 
@@ -29,6 +32,35 @@ export function TrackingPage(): JSX.Element {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<TrackOrderResponse | null>(null);
+  const [branding, setBranding] = useState<PublicLocation | null>(null);
+  const cachedBranding = useRef(readCachedBranding()).current;
+
+  // This page can be the very first one opened (a shared tracking link), so
+  // unlike App.tsx there is no menu fetch already in flight to ride along
+  // with -- a small standalone location fetch fills in the same branding.
+  useEffect(() => {
+    const control = new AbortController();
+    fetchLocation(control.signal)
+      .then(({ location }) => {
+        applyColorScheme(location.colorScheme);
+        cacheBranding({
+          name: location.name,
+          colorScheme: location.colorScheme,
+          logoUrl: location.logoUrl,
+          waNumber: location.waNumber
+        });
+        setBranding(location);
+      })
+      .catch(() => {
+        // No branding fetched is not fatal here -- the cache (or the seeded
+        // default) already covers the header, and the actual order lookup
+        // below still works independently.
+      });
+    return () => control.abort();
+  }, []);
+
+  const brandName = branding?.name ?? resultado?.location.name ?? cachedBranding?.name ?? DEFAULT_NAME;
+  const logoUrl = branding?.logoUrl ?? resultado?.location.logoUrl ?? cachedBranding?.logoUrl ?? null;
 
   const buscar = useCallback(async (tel: string, numero: string, signal?: AbortSignal): Promise<void> => {
     const orderNumber = Number(numero);
@@ -92,8 +124,8 @@ export function TrackingPage(): JSX.Element {
       <header className="cab cab-rastreo">
         <div className="w">
           <a className="rastreo-marca" href="/">
-            <img src="/marca.webp" alt="Pizza's Chesa're" width={44} height={44} />
-            <span>Pizza's Chesa're</span>
+            {logoUrl ? <img src={logoUrl} alt={brandName} width={44} height={44} /> : null}
+            <span>{brandName}</span>
           </a>
         </div>
       </header>
