@@ -334,10 +334,21 @@ code {
    has a real rendering floor it won't shrink below (most visibly on iOS
    Safari), so squeezing its box past that floor doesn't make it narrower,
    it makes it paint outside its own box and over whatever comes next in the
-   row. Giving toolbar fields a realistic minimum means flex-wrap moves the
-   next field down instead of overlapping it. */
+   row. 140px turned out to still be narrower than that floor for a
+   formatted date like "Aug 21, 2026" on an actual iPhone (Chromium's
+   date-input rendering, the only engine available to test against here,
+   didn't reproduce it) -- two of them ended up sharing a border with no
+   gap instead of wrapping. Below 640px, don't try to guess a safe number at
+   all: give every toolbar field the full row, so no two native controls
+   ever have to fit side by side in the first place. */
 .toolbar .field {
   min-width: 140px;
+}
+
+@media (max-width: 640px) {
+  .toolbar .field {
+    flex: 1 1 100%;
+  }
 }
 
 /* A `.field` in a `.toolbar` otherwise sizes to the input's browser-default
