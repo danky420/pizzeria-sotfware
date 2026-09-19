@@ -329,6 +329,17 @@ code {
   flex-wrap: wrap;
 }
 
+/* .field's min-width: 0 lets flex-wrap squeeze it arbitrarily narrow, which
+   is right for a select or a short label -- but a native input[type="date"]
+   has a real rendering floor it won't shrink below (most visibly on iOS
+   Safari), so squeezing its box past that floor doesn't make it narrower,
+   it makes it paint outside its own box and over whatever comes next in the
+   row. Giving toolbar fields a realistic minimum means flex-wrap moves the
+   next field down instead of overlapping it. */
+.toolbar .field {
+  min-width: 140px;
+}
+
 /* A `.field` in a `.toolbar` otherwise sizes to the input's browser-default
    width — fine for a short select or a price, cramped for the one field
    someone is actually meant to type a name into. Opt in on that field only. */
