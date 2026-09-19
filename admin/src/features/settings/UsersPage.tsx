@@ -128,35 +128,37 @@ export function UsersPage() {
           <EmptyState title="Todavía no hay cuentas adicionales" />
         ) : null}
         {usersQuery.data && usersQuery.data.length > 0 ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Último ingreso</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {usersQuery.data.map((user) => (
-                <UserRow
-                  key={user.id}
-                  user={user}
-                  isSelf={user.id === sessionUser.id}
-                  roleOptions={roleOptions}
-                  onToggleActive={(active) => toggleActiveMutation.mutate({ id: user.id, active })}
-                  onChangeRole={(role) => roleMutation.mutate({ id: user.id, role })}
-                  onRemove={() => {
-                    if (window.confirm(`¿Eliminar la cuenta de ${user.name}? Esto no se puede deshacer.`)) {
-                      removeMutation.mutate(user.id);
-                    }
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Último ingreso</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {usersQuery.data.map((user) => (
+                  <UserRow
+                    key={user.id}
+                    user={user}
+                    isSelf={user.id === sessionUser.id}
+                    roleOptions={roleOptions}
+                    onToggleActive={(active) => toggleActiveMutation.mutate({ id: user.id, active })}
+                    onChangeRole={(role) => roleMutation.mutate({ id: user.id, role })}
+                    onRemove={() => {
+                      if (window.confirm(`¿Eliminar la cuenta de ${user.name}? Esto no se puede deshacer.`)) {
+                        removeMutation.mutate(user.id);
+                      }
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
         {toggleActiveMutation.error ? <ErrorNotice error={toggleActiveMutation.error} /> : null}
         {roleMutation.error ? <ErrorNotice error={roleMutation.error} /> : null}
