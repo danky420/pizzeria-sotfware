@@ -114,8 +114,8 @@ img{max-width:100%; display:block}
 }
 .punto{width:8px; height:8px; border-radius:50%; background:#7CE29B; flex:none; box-shadow:0 0 0 3px rgba(124,226,155,.25)}
 .estado.off .punto{background:#FFB199; box-shadow:0 0 0 3px rgba(255,177,153,.2)}
-.dir{margin:6px 0 0; font-size:.8rem; color:#FBE6CC; line-height:1.4; display:flex; align-items:center; justify-content:flex-end; gap:5px}
-.dir svg{flex:none; opacity:.85}
+.dir{margin:6px 0 0; font-size:.8rem; color:#FBE6CC; line-height:1.4; display:flex; align-items:flex-start; justify-content:flex-end; gap:5px}
+.dir svg{flex:none; opacity:.85; margin-top:.2em}
 @media(max-width:640px){
   /* .cab has overflow:hidden (for the decorative dot pattern), so an item
      that refuses to shrink below its unwrapped content width -- the open/closed

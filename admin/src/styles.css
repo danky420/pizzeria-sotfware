@@ -982,6 +982,15 @@ tbody tr:hover td {
     overflow-x: auto;
     scrollbar-width: none;
     gap: 4px;
+    /* Without this, a swipe can leave the row stopped mid-label -- half a
+       word sitting right at the edge reads as broken rather than "scroll for
+       more". Snapping each link's start to the edge means it always settles
+       on a full label; the mask fades whatever's still cut off at rest
+       (e.g. on first load, before anyone has scrolled at all) instead of
+       hard-clipping it. */
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
   }
 
   .shell-nav::-webkit-scrollbar {
@@ -990,6 +999,7 @@ tbody tr:hover td {
 
   .nav-link {
     flex: none;
+    scroll-snap-align: start;
   }
 
   .shell-user {
