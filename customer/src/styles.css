@@ -107,7 +107,7 @@ img{max-width:100%; display:block}
   font-size:clamp(1.3rem,3.4vw,1.7rem); text-shadow:0 2px 8px rgba(0,0,0,.22);
 }
 .hero-tag{margin:3px 0 0; color:#FBE6CC; font-size:.85rem; max-width:32ch}
-.cab-info{flex:none; text-align:right; min-width:0}
+.cab-info{flex:1 1 auto; text-align:right; min-width:0}
 .estado{
   display:inline-flex; align-items:center; gap:7px; background:rgba(0,0,0,.26);
   border-radius:999px; padding:5px 12px; font-weight:600; font-size:.78rem; line-height:1.3;
@@ -116,6 +116,16 @@ img{max-width:100%; display:block}
 .estado.off .punto{background:#FFB199; box-shadow:0 0 0 3px rgba(255,177,153,.2)}
 .dir{margin:6px 0 0; font-size:.8rem; color:#FBE6CC; line-height:1.4; display:flex; align-items:center; justify-content:flex-end; gap:5px}
 .dir svg{flex:none; opacity:.85}
+@media(max-width:640px){
+  /* .cab has overflow:hidden (for the decorative dot pattern), so an item
+     that refuses to shrink below its unwrapped content width -- the open/closed
+     line and the address can both run long -- gets silently clipped instead of
+     wrapping. Forcing the full row width here sidesteps flex's shrink-to-fit
+     sizing entirely: it always wraps onto its own line under .hero-fila and
+     its own text wraps normally within that width. */
+  .cab-info{flex:1 1 100%; width:100%}
+  .estado, .dir{max-width:100%}
+}
 @media(min-width:640px){
   .marca{width:68px}
   .hero-texto h1{font-size:clamp(1.5rem,2.6vw,1.85rem)}
