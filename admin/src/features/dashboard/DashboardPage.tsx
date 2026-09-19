@@ -8,6 +8,7 @@ import {
   ORDER_STATUS_LABELS,
   PageHeader,
   Panel,
+  ToolbarDebug,
   type Order,
   type OrderStatus
 } from "@chesare/portal-shared";
@@ -148,6 +149,8 @@ export function DashboardPage() {
           <p className="notice notice-error">La fecha «desde» debe ser anterior o igual a «hasta».</p>
         ) : null}
       </Panel>
+
+      <ToolbarDebug />
 
       <ErrorNotice error={summary.error} title="No se pudo cargar el resumen" />
 

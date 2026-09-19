@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "../ui/index";
-import { EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "../ui/index";
+import { EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel, ToolbarDebug } from "../ui/index";
 import { formatDateTime, formatMoney } from "../format";
 import { ordersApi } from "../api/orders";
 import { FULFILLMENT_LABELS, ORDER_STATUSES, ORDER_STATUS_LABELS, orderStatusTone } from "./status";
@@ -145,6 +145,8 @@ export function OrdersQueuePage({ location }: { location: Location }) {
             </span>
           ) : null}
         </div>
+
+        <ToolbarDebug />
 
         <ErrorNotice error={orders.error} title="No se pudieron cargar los pedidos" />
 
