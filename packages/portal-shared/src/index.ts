@@ -51,7 +51,7 @@ export { OrdersQueuePage } from "./orders/OrdersQueuePage";
 export { OrderDetailPage } from "./orders/OrderDetailPage";
 
 // UI primitives
-export { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel, ToolbarDebug } from "./ui/index";
+export { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "./ui/index";
 
 // Display formatting
 export { formatDate, formatDateTime, formatMoney, formatNumber } from "./format";

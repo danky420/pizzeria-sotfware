@@ -10,7 +10,7 @@
  * `field-hint`, `badge` + `badge-{ok,warn,muted,info}` and `muted`.
  * `admin/src/styles.css` already defines all of them.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ApiError } from "../api/client";
 
 export function Loading({ label = "Cargando…" }: { label?: string }) {
@@ -133,80 +133,4 @@ export function Field({
 
 export function Badge({ tone, children }: { tone?: "ok" | "warn" | "muted" | "info"; children: ReactNode }) {
   return <span className={`badge badge-${tone ?? "muted"}`}>{children}</span>;
-}
-
-// TEMPORARY diagnostic, not for permanent use: four CSS fixes for the
-// Desde/Hasta date-input overflow have shipped and all four failed on the
-// reporter's real device, none of it reproducible in this environment
-// (Chromium, real and emulated, never shows the bug). Rather than ship a
-// fifth guess, this prints the actual on-screen measurements as visible
-// text so a screenshot carries real numbers instead of a photo to infer
-// from. Delete this function and its one call site in each page once the
-// real culprit is found.
-export function ToolbarDebug() {
-  const [report, setReport] = useState<string>("measuring…");
-  const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("debug");
-
-  useEffect(() => {
-    if (!enabled) return;
-    function measure() {
-      const lines: string[] = [];
-      lines.push(`window.innerWidth=${window.innerWidth} devicePixelRatio=${window.devicePixelRatio}`);
-      lines.push(`document.body.scrollWidth=${document.body.scrollWidth}`);
-      const inputs = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
-      inputs.forEach((input, index) => {
-        const field = input.closest<HTMLElement>(".field");
-        const toolbar = input.closest<HTMLElement>(".toolbar");
-        const panel = input.closest<HTMLElement>(".panel");
-        const chain: [string, HTMLElement | null][] = [
-          ["input", input],
-          ["field", field],
-          ["toolbar", toolbar],
-          ["panel", panel]
-        ];
-        lines.push(`--- date input #${index} ---`);
-        for (const [label, el] of chain) {
-          if (!el) {
-            lines.push(`${label}: (not found)`);
-            continue;
-          }
-          const r = el.getBoundingClientRect();
-          const cs = getComputedStyle(el);
-          lines.push(
-            `${label}: left=${r.left.toFixed(1)} right=${r.right.toFixed(1)} width=${r.width.toFixed(1)} ` +
-              `| css width=${cs.width} display=${cs.display} overflow=${cs.overflow} boxSizing=${cs.boxSizing}`
-          );
-        }
-      });
-      setReport(lines.join("\n"));
-    }
-    measure();
-    window.addEventListener("resize", measure);
-    const timer = window.setInterval(measure, 1000);
-    return () => {
-      window.removeEventListener("resize", measure);
-      window.clearInterval(timer);
-    };
-  }, [enabled]);
-
-  if (!enabled) return null;
-
-  return (
-    <pre
-      style={{
-        background: "#000",
-        color: "#0f0",
-        fontSize: "10px",
-        lineHeight: 1.4,
-        padding: "8px",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-all",
-        maxWidth: "100%",
-        overflow: "hidden",
-        border: "2px solid red"
-      }}
-    >
-      {report}
-    </pre>
-  );
 }
