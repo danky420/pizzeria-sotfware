@@ -38,6 +38,9 @@ export function presentLocation(location: Location) {
     timezone: location.timezone,
     currency: location.currency,
     addressText: location.addressText,
+    tagline: location.tagline,
+    legalNotice: location.legalNotice,
+    demoNotice: location.demoNotice,
     colorScheme: location.colorScheme,
     // Computed, not stored -- a stable, cacheable URL derived from whether a
     // logo is set at all. See GET /api/public/locations/:slug/logo.
@@ -119,6 +122,11 @@ export function presentItem(
     itemType: item.itemType,
     flatPrice: decimalToNumber(item.flatPrice),
     subgroupLabel: item.subgroupLabel,
+    iconKey: item.iconKey,
+    // A real photo, if uploaded -- takes priority over everything else in
+    // itemIcon() (customer/src/lib/menu.tsx). Flat route, same reasoning as
+    // presentCategory()'s iconUrl: the item id is already public here.
+    imageUrl: item.imageAssetId ? `/api/public/items/${item.id}/image` : null,
     toppingColors: item.toppingColors ?? null,
     isFeatured: item.isFeatured,
     ageRestricted: item.ageRestricted,
@@ -136,6 +144,15 @@ export function presentCategory(category: MenuCategory) {
     slug: category.slug,
     name: category.name,
     description: category.description,
+    // iconKey is the built-in default; iconUrl (if set) is the tenant's own
+    // uploaded image and takes priority over it client-side -- see
+    // docs/multi-tenant-branding-plan.md. Flat, not nested under the location
+    // slug: the category id is already public once the menu is fetched (it's
+    // right above in this same object), so nesting would add no real scoping.
+    iconKey: category.iconKey,
+    iconUrl: category.iconAssetId ? `/api/public/categories/${category.id}/icon` : null,
+    // "gallery" | "rows" | null -- see MenuCategory.displayStyle in schema.prisma.
+    displayStyle: category.displayStyle,
     sortOrder: category.sortOrder,
     active: category.active
   };

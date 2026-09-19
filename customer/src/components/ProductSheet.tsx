@@ -79,7 +79,7 @@ export function ProductSheet({ selection, onClose, onAdd }: Props): JSX.Element 
   return (
     <>
       <div className="hoja-top">
-        <div className="ic">{itemIcon(category.slug, item)}</div>
+        <div className="ic">{itemIcon(category, item)}</div>
         <div>
           <h3 id="h-nom">{item.name}</h3>
           <p>{item.description ?? ""}</p>

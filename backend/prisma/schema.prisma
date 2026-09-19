@@ -59,6 +59,22 @@ model Location {
   currency    String   @default("MXN")
   active      Boolean  @default(true)
   addressText String?
+  // Short line under the name in the customer site's header, e.g. "Pizza de
+  // horno, hecha en Maltrata." Null renders no tagline at all rather than a
+  // guessed default -- most of this feature's other hardcoded pizzeria copy
+  // (name, address, phone) had an obvious per-tenant replacement; this one
+  // didn't, so it stays optional (docs/multi-tenant-branding-plan.md).
+  tagline     String?
+  // Free-text footer notices, e.g. an age-restriction line for a tenant that
+  // sells alcohol. Null shows nothing -- unlike name/logo/address, most
+  // tenants won't need one at all, so there is no sensible non-null default
+  // for a brand-new location (docs/multi-tenant-branding-plan.md).
+  legalNotice String?
+  // Same reasoning as legalNotice: an optional footer note, e.g. "some prices
+  // are still being confirmed." Chesa're's seeded value is today's exact
+  // "still transcribing the printed menu" text -- genuinely true for this
+  // tenant right now, not permanent boilerplate every future tenant inherits.
+  demoNotice  String?
   // Validated server-side against SUPPORTED_COLOR_SCHEMES (backend/src/schemas/
   // locations.ts) -- a free string here, not an enum, so adding or renaming a
   // scheme never needs a migration.
@@ -153,10 +169,28 @@ model MenuCategory {
   description String?
   sortOrder   Int      @default(0)
   active      Boolean  @default(true)
+  // One of CATEGORY_ICON_KEYS (backend/src/schemas/menu.ts) -- the built-in,
+  // cuisine-agnostic default shown until/unless the tenant uploads their own
+  // (iconAssetId below). Null falls back to a generic icon, never a guess.
+  iconKey     String?
+  iconAssetId String?  @unique
+  // "gallery" | "rows" | null. Controls which card component the storefront
+  // uses for this category's items -- gallery is the big, image-forward
+  // vertical card (customer/src/components/MenuSections.tsx's `Card`), rows
+  // is the compact horizontal one (`CardRow`), used everywhere else today.
+  // Null means "rows", except the seeded "pizzas" category, which is seeded
+  // as "gallery" to preserve its exact current look. This used to be decided
+  // by a hardcoded `category.slug === "pizzas"` check in that same file --
+  // real data now, not a string match on this pizzeria's own slug, so any
+  // tenant's own simple, photogenic items (tacos, sandwiches, whatever) can
+  // get the same treatment.
+  displayStyle String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   location     Location                  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  iconAsset    CategoryIcon?             @relation("CategoryIconChosen", fields: [iconAssetId], references: [id])
+  icons        CategoryIcon[]            @relation("CategoryIconOwner")
   sizeOptions  MenuCategorySizeOption[]
   styleOptions MenuCategoryStyleOption[]
   items        MenuItem[]
@@ -164,6 +198,41 @@ model MenuCategory {
 
   @@unique([locationId, slug])
   @@index([locationId])
+}
+
+// Same content-addressed pattern as LocationAsset (docs/multi-tenant-branding-plan.md):
+// a new upload always creates a new row and repoints MenuCategory.iconAssetId
+// rather than mutating bytes in place, which is what makes the immutable cache
+// header on the serving route safe. Orphaned rows are left alone.
+model CategoryIcon {
+  id         String   @id @default(cuid())
+  categoryId String
+  mimeType   String
+  data       Bytes
+  size       Int
+  createdAt  DateTime @default(now())
+
+  category  MenuCategory  @relation("CategoryIconOwner", fields: [categoryId], references: [id], onDelete: Cascade)
+  iconFor   MenuCategory? @relation("CategoryIconChosen")
+
+  @@index([categoryId])
+}
+
+// Same content-addressed pattern as CategoryIcon/LocationAsset -- a new upload
+// creates a new row and repoints MenuItem.imageAssetId rather than mutating
+// bytes in place.
+model MenuItemImage {
+  id         String   @id @default(cuid())
+  itemId     String
+  mimeType   String
+  data       Bytes
+  size       Int
+  createdAt  DateTime @default(now())
+
+  item    MenuItem  @relation("MenuItemImageOwner", fields: [itemId], references: [id], onDelete: Cascade)
+  imageOf MenuItem? @relation("MenuItemImageChosen")
+
+  @@index([itemId])
 }
 
 model MenuCategorySizeOption {
@@ -214,6 +283,17 @@ model MenuItem {
   // "Cafés y tés" inside one "Frappés y café" category. Null means the item
   // renders in its category's undifferentiated list.
   subgroupLabel String?
+  // Overrides the category's own iconKey for this one item -- e.g. a coffee
+  // item inside an otherwise frappé-iconed category. One of CATEGORY_ICON_KEYS
+  // (backend/src/schemas/menu.ts), or null to just use the category's default.
+  iconKey       String?
+  // A real photo of the dish, if the tenant has one -- takes priority over
+  // everything else in itemIcon() (the category's own uploaded image, iconKey,
+  // and the built-in icon set), since a real photo beats any symbolic icon.
+  // Same content-addressed pattern as LocationAsset/CategoryIcon: a new
+  // upload creates a new MenuItemImage row and repoints this rather than
+  // mutating bytes in place.
+  imageAssetId  String?  @unique
   toppingColors Json?
   isFeatured    Boolean  @default(false)
   ageRestricted Boolean  @default(false)
@@ -223,6 +303,8 @@ model MenuItem {
   updatedAt     DateTime @updatedAt
 
   category     MenuCategory          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  imageAsset   MenuItemImage?        @relation("MenuItemImageChosen", fields: [imageAssetId], references: [id])
+  images       MenuItemImage[]       @relation("MenuItemImageOwner")
   priceCells   MenuItemPriceCell[]
   optionGroups MenuItemOptionGroup[]
   orderItems   OrderItem[]

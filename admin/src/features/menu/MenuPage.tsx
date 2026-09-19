@@ -23,6 +23,8 @@ export function MenuPage() {
         slug: slugify(name),
         name: name.trim(),
         description: null,
+        iconKey: null,
+        displayStyle: null,
         sortOrder: menu.data?.length ?? 0,
         active: true
       }),

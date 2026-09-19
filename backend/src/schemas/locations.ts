@@ -28,6 +28,9 @@ export const createLocationBody = z.object({
   timezone: z.string().trim().min(1).max(64).default("America/Mexico_City"),
   currency: currencySchema.default("MXN"),
   addressText: z.string().trim().max(300).optional(),
+  tagline: z.string().trim().max(160).optional(),
+  legalNotice: z.string().trim().max(200).optional(),
+  demoNotice: z.string().trim().max(400).optional(),
   colorScheme: colorSchemeSchema.default("rojo-clasico"),
   active: z.boolean().default(true)
 });

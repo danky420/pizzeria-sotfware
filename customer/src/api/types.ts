@@ -17,6 +17,9 @@ export interface PublicLocation {
   timezone: string;
   currency: string;
   addressText: string | null;
+  tagline: string | null;
+  legalNotice: string | null;
+  demoNotice: string | null;
   colorScheme: string;
   logoUrl: string | null;
   active: boolean;
@@ -77,6 +80,12 @@ export interface MenuItem {
   itemType: ItemType;
   flatPrice: number | null;
   subgroupLabel: string | null;
+  // Overrides the category's own iconKey for just this item, e.g. a coffee
+  // item inside an otherwise frappé-iconed category.
+  iconKey: string | null;
+  // A real uploaded photo of the dish, if set -- takes priority over
+  // everything else in itemIcon() (lib/menu.tsx).
+  imageUrl: string | null;
   toppingColors: string[] | null;
   isFeatured: boolean;
   ageRestricted: boolean;
@@ -92,6 +101,14 @@ export interface MenuCategory {
   slug: string;
   name: string;
   description: string | null;
+  // iconKey is the built-in default; iconUrl (if set) is the tenant's own
+  // uploaded image and takes priority over it -- see itemIcon()/sectionIcon()
+  // in lib/menu.tsx and docs/multi-tenant-branding-plan.md.
+  iconKey: string | null;
+  iconUrl: string | null;
+  // "gallery" | "rows" | null -- see MenuSections.tsx's BlockView, which picks
+  // between the big image-forward Card and the compact CardRow based on this.
+  displayStyle: string | null;
   sortOrder: number;
   active: boolean;
   sizeOptions: SizeOption[];

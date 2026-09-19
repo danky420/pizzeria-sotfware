@@ -26,6 +26,7 @@ export interface CachedBranding {
   // colorScheme), but cheap to keep around so the network-failure state in
   // App.tsx can still offer a phone number instead of going silent.
   waNumber: string | null;
+  tagline: string | null;
 }
 
 export function cacheBranding(branding: CachedBranding): void {
@@ -46,13 +47,31 @@ export function readCachedBranding(): CachedBranding | null {
       name: parsed.name,
       colorScheme: parsed.colorScheme,
       logoUrl: typeof parsed.logoUrl === "string" ? parsed.logoUrl : null,
-      waNumber: typeof parsed.waNumber === "string" ? parsed.waNumber : null
+      waNumber: typeof parsed.waNumber === "string" ? parsed.waNumber : null,
+      tagline: typeof parsed.tagline === "string" ? parsed.tagline : null
     };
   } catch {
     return null;
   }
 }
 
+// The light-mode PWA status-bar color (index.html's light theme-color meta)
+// -- must match each scheme's --rojo in styles.css exactly, since this can't
+// read a CSS custom property before paint. The dark theme-color meta stays
+// "#181210" (the fixed dark --crema background) regardless of scheme; only
+// --rojo/--rojo-osc/--rojo-hondo/--amarillo shift between schemes, not --crema.
+const THEME_COLOR_LIGHT: Record<string, string> = {
+  "rojo-clasico": "#D22B27",
+  "verde-oliva": "#3F7D42",
+  "azul-marino": "#1F5C8B"
+};
+
 export function applyColorScheme(colorScheme: string): void {
   document.documentElement.setAttribute("data-scheme", colorScheme);
+  const light = THEME_COLOR_LIGHT[colorScheme];
+  if (light) {
+    document
+      .querySelector('meta[name="theme-color"][media="(prefers-color-scheme: light)"]')
+      ?.setAttribute("content", light);
+  }
 }

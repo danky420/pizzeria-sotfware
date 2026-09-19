@@ -7,6 +7,9 @@ export interface LocationInput {
   timezone: string;
   currency: string;
   addressText: string;
+  tagline: string;
+  legalNotice: string;
+  demoNotice: string;
   colorScheme: string;
   active: boolean;
 }

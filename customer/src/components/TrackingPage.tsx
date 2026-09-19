@@ -47,9 +47,19 @@ export function TrackingPage(): JSX.Element {
           name: location.name,
           colorScheme: location.colorScheme,
           logoUrl: location.logoUrl,
-          waNumber: location.waNumber
+          waNumber: location.waNumber,
+          tagline: location.tagline
         });
         setBranding(location);
+        // This page can be the very first one a browser tab ever opens (a
+        // shared tracking link), so it needs the same tab title/icon patch
+        // App.tsx does -- there's no shared <title> to inherit from.
+        document.title = `Rastrea tu pedido · ${location.name}`;
+        if (location.logoUrl) {
+          document.querySelector('link[rel="icon"]')?.setAttribute("href", location.logoUrl);
+          document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute("href", location.logoUrl);
+        }
+        document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute("content", location.name);
       })
       .catch(() => {
         // No branding fetched is not fatal here -- the cache (or the seeded

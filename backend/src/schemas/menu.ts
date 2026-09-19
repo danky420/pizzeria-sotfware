@@ -14,10 +14,40 @@ export const selectionTypeSchema = z.enum(["SINGLE", "MULTIPLE"]);
 
 const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Use a #RRGGBB hex colour");
 
+// The built-in, cuisine-agnostic icon choices a category can pick before (or
+// instead of) uploading its own image -- see docs/multi-tenant-branding-plan.md.
+// A validated string, not a DB enum, so adding one later never needs a migration
+// (same reasoning as SUPPORTED_COLOR_SCHEMES in schemas/locations.ts). Each key
+// maps to an existing hand-drawn icon component in customer/src/lib/menu.tsx;
+// "generic" is the plate-and-cutlery fallback for a category that fits none of
+// these.
+export const CATEGORY_ICON_KEYS = [
+  "pizza",
+  "burger",
+  "wings",
+  "pasta",
+  "dessert",
+  "frappe",
+  "coffee",
+  "bottle",
+  "can",
+  "generic"
+] as const;
+export const categoryIconKeySchema = z.enum(CATEGORY_ICON_KEYS);
+
+// Which card component the storefront uses for this category's items --
+// "gallery" is the big, image-forward vertical card (previously hardcoded to
+// only the "pizzas" slug), "rows" the compact horizontal one used everywhere
+// else. Null defers to the seed-time default (rows, except pizzas).
+export const CATEGORY_DISPLAY_STYLES = ["gallery", "rows"] as const;
+export const categoryDisplayStyleSchema = z.enum(CATEGORY_DISPLAY_STYLES);
+
 export const createCategoryBody = z.object({
   slug: slugSchema,
   name: nameSchema,
   description: descriptionSchema.nullish(),
+  iconKey: categoryIconKeySchema.nullish(),
+  displayStyle: categoryDisplayStyleSchema.nullish(),
   sortOrder: sortOrderSchema.default(0),
   active: z.boolean().default(true)
 });
@@ -58,6 +88,9 @@ export const createItemBody = z.object({
   // Cosmetic sub-heading within the category's list, e.g. "Cafés y tés"
   // inside a "Frappés y café" category. Null renders with no sub-heading.
   subgroupLabel: nameSchema.nullish(),
+  // Overrides the category's own iconKey for this one item -- see MenuItem in
+  // schema.prisma.
+  iconKey: categoryIconKeySchema.nullish(),
   toppingColors: z.array(hexColorSchema).max(12).nullish(),
   isFeatured: z.boolean().default(false),
   ageRestricted: z.boolean().default(false),

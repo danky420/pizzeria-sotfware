@@ -55,7 +55,7 @@ function Card({
   return (
     <button className="card" type="button" disabled={price === null} onClick={onOpen}>
       <span className="media">
-        <span className="ic">{itemIcon(category.slug, item)}</span>
+        <span className="ic">{itemIcon(category, item)}</span>
       </span>
       <span className="cuerpo">
         <span className="fila-tit">
@@ -101,7 +101,7 @@ function CardRow({
   return (
     <button className="card-row" type="button" disabled={price === null} onClick={onOpen}>
       <span className="media">
-        <span className="ic">{itemIcon(category.slug, item)}</span>
+        <span className="ic">{itemIcon(category, item)}</span>
       </span>
       <span className="cuerpo">
         <span className="fila-tit">
@@ -131,7 +131,9 @@ function BlockView({
   category: MenuCategory;
   onOpen: (item: MenuItem) => void;
 }): JSX.Element {
-  const esPizza = category.slug === "pizzas";
+  // Category data, not a hardcoded slug: any category can opt into the big
+  // image-forward card, not just "pizzas" (docs/multi-tenant-branding-plan.md).
+  const galeria = category.displayStyle === "gallery";
   return (
     <>
       {block.title ? (
@@ -142,7 +144,7 @@ function BlockView({
       ) : null}
       <div className="grid">
         {block.items.map((item) =>
-          esPizza ? (
+          galeria ? (
             <Card key={item.id} category={category} item={item} onOpen={() => onOpen(item)} />
           ) : (
             <CardRow key={item.id} category={category} item={item} onOpen={() => onOpen(item)} />
@@ -158,10 +160,10 @@ export function MenuSections({ sections, onOpen }: Props): JSX.Element {
     <>
       {sections.map((section) => (
         <section key={section.id} id={section.id}>
-          <div className={section.category.slug === "pizzas" ? "enc anchor" : "enc"}>
+          <div className={section.category.displayStyle === "gallery" ? "enc anchor" : "enc"}>
             <div className="enc-fila">
               <span className="enc-ic" aria-hidden="true">
-                {sectionIcon(section.category.slug)}
+                {sectionIcon(section.category)}
               </span>
               <h2>{section.category.name}</h2>
               {section.category.description ? (

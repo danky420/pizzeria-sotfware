@@ -40,6 +40,14 @@ const LOCATION = {
   // Today's exact footer text (customer/src/App.tsx) -- multi-tenant branding's
   // migration backfill, see docs/multi-tenant-branding-plan.md.
   addressText: "Av. Ignacio Zaragoza S/N, Manzana 1, 94700 Maltrata, Veracruz",
+  // Today's exact header subtitle (customer/src/App.tsx) -- the one piece of
+  // hardcoded copy in that header with an obvious per-tenant replacement.
+  tagline: "Pizza de horno, hecha en Maltrata.",
+  legalNotice: "Venta de cerveza únicamente a mayores de 18 años.",
+  demoNotice:
+    "Versión de prueba. Los platillos y precios se tomaron del menú impreso de la casa. " +
+    "Algunos renglones venían sin precio (refresco 400 ml, botella de agua, micheladas) " +
+    "y aparecen marcados para completarse.",
   colorScheme: "rojo-clasico"
 };
 
@@ -189,14 +197,29 @@ const HORAS: { d: string; a: number | null; c: number | null }[] = [
   { d: "Sábado", a: 17.5, c: 24 }
 ];
 
+// iconKey matches CATEGORY_ICON_KEYS (backend/src/schemas/menu.ts) -- the
+// built-in default shown until the tenant uploads their own image. "frappes"
+// picks "frappe" as its majority-item icon; the "Cafés y tés" items within it
+// override to "coffee" individually (see their upsertFlatItem call below),
+// restoring the old hardcoded coffee-cup-vs-blender distinction as per-item
+// data instead of a switch(categorySlug) string match.
 const CATEGORIES = [
-  { slug: "pizzas", name: "Pizzas", description: "Seis tamaños, con orilla rellena o extra queso si quieres" },
-  { slug: "hamburguesas", name: "Hamburguesas", description: null },
-  { slug: "alitas", name: "Alitas y boneless", description: "15 salsas" },
-  { slug: "pastas", name: "Pastas", description: "Incluye pan de ajo" },
-  { slug: "postres", name: "Postres y crepas", description: null },
-  { slug: "frappes", name: "Frappés y café", description: null },
-  { slug: "bebidas", name: "Bebidas", description: null }
+  {
+    slug: "pizzas",
+    name: "Pizzas",
+    description: "Seis tamaños, con orilla rellena o extra queso si quieres",
+    iconKey: "pizza",
+    // The one category that used to get the big image-forward card via a
+    // hardcoded `category.slug === "pizzas"` check in MenuSections.tsx --
+    // seeded explicitly here now so removing that check is a zero-diff change.
+    displayStyle: "gallery"
+  },
+  { slug: "hamburguesas", name: "Hamburguesas", description: null, iconKey: "burger" },
+  { slug: "alitas", name: "Alitas y boneless", description: "15 salsas", iconKey: "wings" },
+  { slug: "pastas", name: "Pastas", description: "Incluye pan de ajo", iconKey: "pasta" },
+  { slug: "postres", name: "Postres y crepas", description: null, iconKey: "dessert" },
+  { slug: "frappes", name: "Frappés y café", description: null, iconKey: "frappe" },
+  { slug: "bebidas", name: "Bebidas", description: null, iconKey: "bottle" }
 ];
 
 /* ============ helpers ============ */
@@ -222,7 +245,7 @@ async function upsertFlatItem(
   categoryId: string,
   source: FlatSource,
   sortOrder: number,
-  extra: { ageRestricted?: boolean; subgroupLabel?: string } = {}
+  extra: { ageRestricted?: boolean; subgroupLabel?: string; iconKey?: string } = {}
 ): Promise<string> {
   const data = {
     name: source.n,
@@ -233,6 +256,7 @@ async function upsertFlatItem(
     isFeatured: source.fav === true,
     ageRestricted: extra.ageRestricted ?? false,
     subgroupLabel: extra.subgroupLabel ?? null,
+    iconKey: extra.iconKey ?? null,
     sortOrder
   };
 
@@ -329,6 +353,9 @@ async function main(): Promise<void> {
       timezone: LOCATION.timezone,
       currency: LOCATION.currency,
       addressText: LOCATION.addressText,
+      tagline: LOCATION.tagline,
+      legalNotice: LOCATION.legalNotice,
+      demoNotice: LOCATION.demoNotice,
       colorScheme: LOCATION.colorScheme
     },
     create: { ...LOCATION, active: true }
@@ -365,8 +392,22 @@ async function main(): Promise<void> {
   for (const [sortOrder, category] of CATEGORIES.entries()) {
     const row = await prisma.menuCategory.upsert({
       where: { locationId_slug: { locationId: location.id, slug: category.slug } },
-      update: { name: category.name, description: category.description, sortOrder },
-      create: { locationId: location.id, slug: category.slug, name: category.name, description: category.description, sortOrder }
+      update: {
+        name: category.name,
+        description: category.description,
+        iconKey: category.iconKey,
+        displayStyle: "displayStyle" in category ? category.displayStyle : null,
+        sortOrder
+      },
+      create: {
+        locationId: location.id,
+        slug: category.slug,
+        name: category.name,
+        description: category.description,
+        iconKey: category.iconKey,
+        displayStyle: "displayStyle" in category ? category.displayStyle : null,
+        sortOrder
+      }
     });
     categoryIds.set(category.slug, row.id);
   }
@@ -484,7 +525,12 @@ async function main(): Promise<void> {
   }
   for (const [index, cafe] of CAFES.entries()) {
     await upsertFlatItem(categoryIds.get("frappes") as string, cafe, FRAPPES.length + index, {
-      subgroupLabel: "Cafés y tés"
+      subgroupLabel: "Cafés y tés",
+      // Overrides the "frappes" category's own default icon (frappe) for just
+      // these items -- restores the coffee-cup-vs-blender distinction the old
+      // hardcoded switch(categorySlug) used to draw, now as per-item data
+      // instead of a string match on this pizzeria's subgroup label.
+      iconKey: "coffee"
     });
   }
 
