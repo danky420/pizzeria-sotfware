@@ -917,3 +917,46 @@ tbody tr:hover td {
     font-size: 30px;
   }
 }
+
+/* Below this, the 8-item nav wrapping in place (its default behaviour)
+   pushed a tall, awkward two-column block up against the brand instead of
+   collapsing into something a phone can actually use. Each of the three
+   header groups gets its own full-width row instead; the nav scrolls
+   horizontally, same pattern the customer site's own section nav already
+   uses, rather than wrapping onto more lines. */
+@media (max-width: 640px) {
+  .shell-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .shell-nav {
+    flex: none;
+    /* A flex item's default min-width is "auto" (its content's min-content
+       size), not 0 -- overflow-x: auto alone doesn't let it shrink below
+       that on the cross axis of a column flex parent, which is exactly what
+       was pushing the whole page wider than the viewport instead of
+       scrolling in place. */
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 4px;
+  }
+
+  .shell-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    flex: none;
+  }
+
+  .shell-user {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+}
