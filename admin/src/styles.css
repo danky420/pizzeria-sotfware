@@ -339,18 +339,13 @@ code {
   flex-wrap: wrap;
 }
 
-/* .field's min-width: 0 lets flex-wrap squeeze it arbitrarily narrow, which
-   is right for a select or a short label -- but a native input[type="date"]
-   has a real rendering floor it won't shrink below (most visibly on iOS
-   Safari), so squeezing its box past that floor doesn't make it narrower,
-   it makes it paint outside its own box and over whatever comes next in the
-   row. 140px turned out to still be narrower than that floor for a
-   formatted date like "Aug 21, 2026" on an actual iPhone (Chromium's
-   date-input rendering, the only engine available to test against here,
-   didn't reproduce it) -- two of them ended up sharing a border with no
-   gap instead of wrapping. Below 640px, don't try to guess a safe number at
-   all: give every toolbar field the full row, so no two native controls
-   ever have to fit side by side in the first place. */
+/* .field's min-width: 0 lets flex-wrap squeeze it arbitrarily narrow -- fine
+   for a select or a short label, cramped for a date field. (The Desde/Hasta
+   overflow itself turned out to be a separate iOS Safari box-sizing bug on
+   input[type="date"], fixed where that input is styled; this rule is just
+   about not letting a toolbar field get uncomfortably narrow.) Below 640px,
+   give every field the full row instead of picking a minimum width, since
+   two of them side by side on a phone is cramped either way. */
 .toolbar .field {
   min-width: 140px;
 }
@@ -458,21 +453,17 @@ textarea {
   min-width: 0;
 }
 
-/* Confirmed via an on-page readout of real computed styles on the reporter's
-   iPhone (this sandbox has no WebKit to test against): these render with
-   box-sizing: content-box, adding this rule's own padding (7px 9px, so 18px
-   horizontal) and border (1px each side, so 2px) ON TOP of the 100% width
-   instead of carving it out -- exactly the 20px these were overflowing by.
-   Setting box-sizing: border-box directly on the selector did NOT change
-   the reported computed value on a real retest (confirmed cache was
-   cleared) -- WebKit is not honoring an author box-sizing override on this
-   control's native-appearance rendering at all, for reasons that aren't
-   visible from here. Rather than keep fighting that, subtract the same
-   20px from the specified width directly, so the resulting box lands at
-   100% either way: under content-box (what's actually happening) content
-   + 20px padding/border = 100%; under border-box (if some future WebKit
-   version actually honors it) the box is 20px narrower than it could be,
-   which is a cosmetic issue, not an overflow. */
+/* iOS Safari renders these as box-sizing: content-box, ignoring the
+   `* { box-sizing: border-box }` reset above and an explicit border-box
+   override on this selector alike -- confirmed on a real device, not
+   reproducible in any local browser. Under content-box this rule's own
+   padding (18px horizontal) and border (2px) get added on top of the 100%
+   width instead of being carved out of it, so the control overflowed its
+   container by exactly that 20px. Subtracting it from the width directly
+   sidesteps the box-sizing fight entirely: content + 20px = 100% under
+   content-box (the real case), or 20px narrower than it needs to be under
+   border-box (cosmetic, not an overflow). overflow: hidden is a backstop
+   in case a locale/format renders a longer date than this budget allows. */
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
@@ -501,13 +492,9 @@ textarea {
   min-height: 60px;
 }
 
-/* Not flex: a flex column's cross-axis "stretch" is how the input got its
-   width before, and on an actual iPhone the native date-input widget still
-   rendered a few px wider than the stretched box (Chromium, the only engine
-   available to test against here, always got this right, which is how the
-   previous fixes shipped without catching it). Plain block flow's width:
-   100% is resolved directly against the containing block with no
-   stretch-vs-intrinsic-content ambiguity for a native control to get wrong. */
+/* Plain block flow, not flex -- a label stacking a caption above an input
+   (or a hint below it) doesn't need flex for that, and it's one less layout
+   mechanism to reason about for a component every form on this site uses. */
 .field {
   display: block;
   min-width: 0;
