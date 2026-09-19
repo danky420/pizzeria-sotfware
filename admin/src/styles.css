@@ -458,6 +458,19 @@ textarea {
   min-width: 0;
 }
 
+/* Belt and suspenders after two rounds of guessing wrong at *why*
+   input[type="date"] renders wider than its box on an actual iPhone
+   (untestable in this environment -- no WebKit available here, only
+   Chromium, which never reproduces it): clip it outright. Whatever the
+   native widget wants to paint past its own border box gets cut instead of
+   spilling into whatever sits next to it. Worst case is a truncated date
+   on a screen narrow enough to need it; that beats overlapping UI. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  overflow: hidden;
+}
+
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
