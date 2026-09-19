@@ -458,16 +458,20 @@ textarea {
   min-width: 0;
 }
 
-/* Belt and suspenders after two rounds of guessing wrong at *why*
-   input[type="date"] renders wider than its box on an actual iPhone
-   (untestable in this environment -- no WebKit available here, only
-   Chromium, which never reproduces it): clip it outright. Whatever the
-   native widget wants to paint past its own border box gets cut instead of
-   spilling into whatever sits next to it. Worst case is a truncated date
-   on a screen narrow enough to need it; that beats overlapping UI. */
+/* Found via an on-page readout of real computed styles on the reporter's
+   iPhone (this sandbox has no WebKit to test against): Safari renders these
+   with box-sizing: content-box despite the universal `* { box-sizing:
+   border-box }` reset above -- a known WebKit quirk where the UA stylesheet
+   for native date/time controls can outrank an author reset applied only
+   through the universal selector. With content-box, this rule's own
+   padding (7px 9px) and border (1px) get added ON TOP of the 100% width
+   instead of being carved out of it, which is exactly what was pushing
+   these past their container. Naming the property directly on the
+   selector, rather than through `*`, is what makes it win. */
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
+  box-sizing: border-box;
   overflow: hidden;
 }
 
