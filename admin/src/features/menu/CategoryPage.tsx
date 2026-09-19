@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { menuApi, type PriceMatrixCellInput } from "../../api/menu";
 import {
   Badge,
@@ -8,6 +8,7 @@ import {
   ErrorNotice,
   Field,
   Loading,
+  type MenuCategory,
   PageHeader,
   Panel,
   type ItemType,
@@ -19,6 +20,155 @@ import {
 import { SuccessNotice, Toggle } from "../../components/ui";
 import { formatMoney, slugify } from "../../lib/format";
 import { useActiveLocation } from "../../state/location";
+
+// Mirrors backend/src/schemas/menu.ts's CATEGORY_ICON_KEYS -- the built-in
+// icons a category can pick before (or instead of) uploading its own image.
+const ICON_KEY_OPTIONS: { value: string; label: string }[] = [
+  { value: "pizza", label: "Pizza" },
+  { value: "burger", label: "Hamburguesa" },
+  { value: "wings", label: "Alitas" },
+  { value: "pasta", label: "Pasta" },
+  { value: "dessert", label: "Postre" },
+  { value: "frappe", label: "Frappé" },
+  { value: "coffee", label: "Café" },
+  { value: "bottle", label: "Botella" },
+  { value: "can", label: "Lata" },
+  { value: "generic", label: "Genérico" }
+];
+
+const MAX_ICON_BYTES = 1 * 1024 * 1024;
+const ALLOWED_ICON_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+// Mirrors backend/src/schemas/menu.ts's CATEGORY_DISPLAY_STYLES. null defers
+// to the seed-time default (rows, except "pizzas") rather than forcing every
+// existing category to pick one explicitly.
+const DISPLAY_STYLE_OPTIONS: { value: string | null; label: string }[] = [
+  { value: null, label: "Automático" },
+  { value: "gallery", label: "Galería" },
+  { value: "rows", label: "Filas" }
+];
+
+function CategoryIconPanel({ category }: { category: MenuCategory }) {
+  const queryClient = useQueryClient();
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["menu", "category", category.id] });
+    void queryClient.invalidateQueries({ queryKey: ["menu", "tree"] });
+  };
+
+  const setIconKey = useMutation({
+    mutationFn: (iconKey: string) => menuApi.updateCategory(category.id, { iconKey }),
+    onSuccess: invalidate
+  });
+
+  const setDisplayStyle = useMutation({
+    mutationFn: (displayStyle: string | null) => menuApi.updateCategory(category.id, { displayStyle }),
+    onSuccess: invalidate
+  });
+
+  const uploadIcon = useMutation({
+    mutationFn: (file: File) => menuApi.uploadIcon(category.id, file),
+    onSuccess: () => {
+      setUploadError(null);
+      invalidate();
+    }
+  });
+
+  function onIconSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_ICON_TYPES.has(file.type)) {
+      setUploadError("Formato no permitido. Usa PNG, JPEG o WEBP.");
+      return;
+    }
+    if (file.size > MAX_ICON_BYTES) {
+      setUploadError("La imagen pesa más de 1 MB.");
+      return;
+    }
+    setUploadError(null);
+    uploadIcon.mutate(file);
+  }
+
+  return (
+    <Panel title="Presentación e icono">
+      <Field
+        label="Estilo de tarjetas"
+        hint='"Automático" usa filas compactas (como Bebidas), salvo para Pizzas. "Galería" muestra tarjetas grandes con imagen, como Pizzas hoy.'
+      >
+        <div className="row color-scheme-picker" role="radiogroup" aria-label="Estilo de tarjetas">
+          {DISPLAY_STYLE_OPTIONS.map((option) => (
+            <label
+              key={option.value ?? "auto"}
+              className={
+                (category.displayStyle ?? null) === option.value ? "color-scheme-option on" : "color-scheme-option"
+              }
+            >
+              <input
+                type="radio"
+                name="displayStyle"
+                checked={(category.displayStyle ?? null) === option.value}
+                disabled={setDisplayStyle.isPending}
+                onChange={() => setDisplayStyle.mutate(option.value)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </Field>
+      <ErrorNotice error={setDisplayStyle.error} title="No se pudo cambiar el estilo" />
+
+      <Field
+        label="Icono integrado"
+        hint="Se usa mientras la categoría no tenga una imagen propia (abajo)."
+      >
+        <div className="row color-scheme-picker" role="radiogroup" aria-label="Icono integrado">
+          {ICON_KEY_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={category.iconKey === option.value ? "color-scheme-option on" : "color-scheme-option"}
+            >
+              <input
+                type="radio"
+                name="iconKey"
+                value={option.value}
+                checked={category.iconKey === option.value}
+                disabled={setIconKey.isPending}
+                onChange={() => setIconKey.mutate(option.value)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </Field>
+      <ErrorNotice error={setIconKey.error} title="No se pudo cambiar el icono" />
+
+      <Field label="Imagen propia" hint="PNG, JPEG o WEBP, hasta 1 MB. Si la subes, reemplaza al icono integrado.">
+        <div className="row logo-uploader">
+          {category.iconUrl ? (
+            <img className="logo-preview" src={category.iconUrl} alt="Icono actual" />
+          ) : (
+            <span className="muted">Sin imagen propia todavía.</span>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={onIconSelected}
+            disabled={uploadIcon.isPending}
+          />
+        </div>
+      </Field>
+      {uploadIcon.isPending ? <Loading label="Subiendo imagen…" /> : null}
+      {uploadError ? <ErrorNotice error={new Error(uploadError)} /> : null}
+      {uploadIcon.error ? <ErrorNotice error={uploadIcon.error} /> : null}
+      {uploadIcon.isSuccess && !uploadIcon.isPending ? <SuccessNotice>Imagen actualizada.</SuccessNotice> : null}
+    </Panel>
+  );
+}
 
 /**
  * "" means the price is genuinely unknown (`p: null` on the static site — the item
@@ -400,6 +550,32 @@ function ItemCard({
     onSuccess: invalidate
   });
 
+  const [imageError, setImageError] = useState<string | null>(null);
+  const uploadImage = useMutation({
+    mutationFn: (file: File) => menuApi.uploadItemImage(item.id, file),
+    onSuccess: () => {
+      setImageError(null);
+      invalidate();
+    }
+  });
+
+  function onImageSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ALLOWED_ICON_TYPES.has(file.type)) {
+      setImageError("Formato no permitido. Usa PNG, JPEG o WEBP.");
+      return;
+    }
+    if (file.size > MAX_ICON_BYTES) {
+      setImageError("La imagen pesa más de 1 MB.");
+      return;
+    }
+    setImageError(null);
+    uploadImage.mutate(file);
+  }
+
   const addGroup = useMutation({
     mutationFn: () =>
       menuApi.createOptionGroup(item.id, {
@@ -479,6 +655,26 @@ function ItemCard({
             </button>
           </div>
           <ErrorNotice error={saveDetails.error} title="No se pudieron guardar los datos" />
+
+          <Field label="Foto del producto" hint="PNG, JPEG o WEBP, hasta 1 MB. Reemplaza al icono en el sitio público.">
+            <div className="row logo-uploader">
+              {item.imageUrl ? (
+                <img className="logo-preview" src={item.imageUrl} alt="Foto actual" />
+              ) : (
+                <span className="muted">Sin foto todavía.</span>
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={onImageSelected}
+                disabled={uploadImage.isPending}
+              />
+            </div>
+          </Field>
+          {uploadImage.isPending ? <Loading label="Subiendo foto…" /> : null}
+          {imageError ? <ErrorNotice error={new Error(imageError)} /> : null}
+          {uploadImage.error ? <ErrorNotice error={uploadImage.error} /> : null}
+          {uploadImage.isSuccess && !uploadImage.isPending ? <SuccessNotice>Foto actualizada.</SuccessNotice> : null}
 
           {item.itemType === "FLAT" ? (
             <FlatPriceEditor item={item} categoryId={categoryId} />
@@ -632,6 +828,16 @@ function NewItemForm({ categoryId, nextSortOrder }: { categoryId: string; nextSo
 
 export function CategoryPage() {
   const { categoryId = "" } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const removeCategory = useMutation({
+    mutationFn: () => menuApi.removeCategory(categoryId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["menu", "tree"] });
+      navigate("/menu");
+    }
+  });
 
   const category = useQuery({
     queryKey: ["menu", "category", categoryId],
@@ -671,11 +877,31 @@ export function CategoryPage() {
         title={category.data.category.name}
         description={category.data.category.description ?? undefined}
         actions={
-          <Link className="btn" to="/menu">
-            Volver al menú
-          </Link>
+          <div className="row">
+            <Link className="btn" to="/menu">
+              Volver al menú
+            </Link>
+            <button
+              type="button"
+              className="btn btn-sm btn-danger"
+              disabled={removeCategory.isPending}
+              onClick={() => {
+                const count = rows.length;
+                const warning =
+                  count > 0
+                    ? `¿Eliminar «${category.data.category.name}»? Esto también elimina sus ${count} producto${count === 1 ? "" : "s"}. No se puede deshacer.`
+                    : `¿Eliminar «${category.data.category.name}»? No se puede deshacer.`;
+                if (window.confirm(warning)) removeCategory.mutate();
+              }}
+            >
+              {removeCategory.isPending ? "Eliminando…" : "Eliminar categoría"}
+            </button>
+          </div>
         }
       />
+      <ErrorNotice error={removeCategory.error} title="No se pudo eliminar la categoría" />
+
+      <CategoryIconPanel category={category.data.category} />
 
       <NewItemForm categoryId={categoryId} nextSortOrder={rows.length} />
 

@@ -211,4 +211,251 @@ describe.skipIf(!databaseReady)("admin location branding", () => {
       expect(response.statusCode).toBe(403);
     });
   });
+
+  describe("category icon", () => {
+    it("has no iconKey or uploaded icon before either is set", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/admin/menu/categories/${fixture.categoryId}`,
+        headers: { cookie: ownerA }
+      });
+      expect(response.json().category.iconKey).toBeNull();
+      expect(response.json().category.iconUrl).toBeNull();
+    });
+
+    it("rejects an unknown iconKey", async () => {
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/api/admin/menu/categories/${fixture.categoryId}`,
+        headers: { cookie: ownerA },
+        payload: { iconKey: "sushi" }
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("accepts a valid iconKey change", async () => {
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/api/admin/menu/categories/${fixture.categoryId}`,
+        headers: { cookie: ownerA },
+        payload: { iconKey: "generic" }
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().category.iconKey).toBe("generic");
+    });
+
+    it("rejects a file over the 1MB cap", async () => {
+      const oversized = Buffer.alloc(1024 * 1024 + 1024, 1);
+      const { payload, contentTypeHeader } = buildMultipartBody("icon", "big.png", "image/png", oversized);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/categories/${fixture.categoryId}/icon`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(response.statusCode).toBe(413);
+    });
+
+    it("rejects an unsupported mime type", async () => {
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "icon",
+        "icon.svg",
+        "image/svg+xml",
+        ONE_PIXEL_PNG
+      );
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/categories/${fixture.categoryId}/icon`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("accepts a valid upload, serves it publicly, and takes priority over iconKey", async () => {
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "icon",
+        "icon.png",
+        "image/png",
+        ONE_PIXEL_PNG
+      );
+
+      const upload = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/categories/${fixture.categoryId}/icon`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(upload.statusCode).toBe(201);
+      const category = upload.json().category;
+      expect(category.iconUrl).toBe(`/api/public/categories/${fixture.categoryId}/icon`);
+      // The built-in default is untouched -- iconUrl is what wins client-side,
+      // not a replacement for iconKey.
+      expect(category.iconKey).toBe("generic");
+
+      const publicIcon = await app.inject({ method: "GET", url: category.iconUrl });
+      expect(publicIcon.statusCode).toBe(200);
+      expect(publicIcon.headers["content-type"]).toBe("image/png");
+      expect(publicIcon.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+      expect(Buffer.compare(publicIcon.rawPayload, ONE_PIXEL_PNG)).toBe(0);
+    });
+
+    it("orphans the old icon asset instead of mutating it when a new one replaces it", async () => {
+      const before = await prisma.menuCategory.findUniqueOrThrow({ where: { id: fixture.categoryId } });
+      const firstAssetId = before.iconAssetId;
+      expect(firstAssetId).not.toBeNull();
+
+      const secondPng = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64"
+      );
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "icon",
+        "icon2.png",
+        "image/png",
+        secondPng
+      );
+
+      const upload = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/categories/${fixture.categoryId}/icon`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(upload.statusCode).toBe(201);
+
+      const after = await prisma.menuCategory.findUniqueOrThrow({ where: { id: fixture.categoryId } });
+      expect(after.iconAssetId).not.toBe(firstAssetId);
+
+      const firstAsset = await prisma.categoryIcon.findUniqueOrThrow({ where: { id: firstAssetId! } });
+      expect(Buffer.compare(firstAsset.data, ONE_PIXEL_PNG)).toBe(0);
+    });
+
+    it("refuses an upload for a category belonging to another location", async () => {
+      const otherCategory = await prisma.menuCategory.create({
+        data: { locationId: fixture.locationB.id, slug: "otra-categoria", name: "Otra", sortOrder: 0 }
+      });
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "icon",
+        "icon.png",
+        "image/png",
+        ONE_PIXEL_PNG
+      );
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/categories/${otherCategory.id}/icon`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it("hides an inactive location's category icon publicly", async () => {
+      const category = await prisma.menuCategory.findUniqueOrThrow({ where: { id: fixture.categoryId } });
+      await prisma.location.update({ where: { id: fixture.locationA.id }, data: { active: false } });
+
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/public/categories/${category.id}/icon`
+      });
+      expect(response.statusCode).toBe(404);
+
+      await prisma.location.update({ where: { id: fixture.locationA.id }, data: { active: true } });
+    });
+  });
+
+  describe("item image", () => {
+    it("has no image before any upload", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/admin/menu/items/${fixture.pizzaId}`,
+        headers: { cookie: ownerA }
+      });
+      expect(response.json().item.imageUrl).toBeNull();
+
+      const publicImage = await app.inject({
+        method: "GET",
+        url: `/api/public/items/${fixture.pizzaId}/image`
+      });
+      expect(publicImage.statusCode).toBe(404);
+    });
+
+    it("rejects a file over the 1MB cap", async () => {
+      const oversized = Buffer.alloc(1024 * 1024 + 1024, 1);
+      const { payload, contentTypeHeader } = buildMultipartBody("image", "big.png", "image/png", oversized);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/items/${fixture.pizzaId}/image`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(response.statusCode).toBe(413);
+    });
+
+    it("rejects an unsupported mime type", async () => {
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "image",
+        "photo.svg",
+        "image/svg+xml",
+        ONE_PIXEL_PNG
+      );
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/items/${fixture.pizzaId}/image`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("accepts a valid upload and serves it publicly", async () => {
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "image",
+        "photo.png",
+        "image/png",
+        ONE_PIXEL_PNG
+      );
+
+      const upload = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/items/${fixture.pizzaId}/image`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(upload.statusCode).toBe(201);
+      const item = upload.json().item;
+      expect(item.imageUrl).toBe(`/api/public/items/${fixture.pizzaId}/image`);
+
+      const publicImage = await app.inject({ method: "GET", url: item.imageUrl });
+      expect(publicImage.statusCode).toBe(200);
+      expect(publicImage.headers["content-type"]).toBe("image/png");
+      expect(publicImage.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+      expect(Buffer.compare(publicImage.rawPayload, ONE_PIXEL_PNG)).toBe(0);
+    });
+
+    it("refuses an upload for an item belonging to another location", async () => {
+      const otherCategory = await prisma.menuCategory.create({
+        data: { locationId: fixture.locationB.id, slug: "otra-cat-img", name: "Otra", sortOrder: 0 }
+      });
+      const otherItem = await prisma.menuItem.create({
+        data: { categoryId: otherCategory.id, slug: "otro-producto", name: "Otro", itemType: "FLAT", sortOrder: 0 }
+      });
+
+      const { payload, contentTypeHeader } = buildMultipartBody(
+        "image",
+        "photo.png",
+        "image/png",
+        ONE_PIXEL_PNG
+      );
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/admin/menu/items/${otherItem.id}/image`,
+        headers: { cookie: ownerA, "content-type": contentTypeHeader },
+        payload
+      });
+      expect(response.statusCode).toBe(403);
+    });
+  });
 });

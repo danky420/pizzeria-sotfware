@@ -40,6 +40,12 @@ export interface Location {
   timezone: string;
   currency: string;
   addressText: string | null;
+  // Short line under the name in the customer site's header. Null shows none.
+  tagline: string | null;
+  // Optional footer notices on the customer site (e.g. an age-restriction
+  // line, a "prices still being confirmed" note). Null shows nothing.
+  legalNotice: string | null;
+  demoNotice: string | null;
   // One of backend/src/schemas/locations.ts's SUPPORTED_COLOR_SCHEMES. admin/
   // and employee/ never apply this to their own chrome (that stays neutral for
   // every tenant, by design) -- it rides along here only because LocationPage
@@ -104,6 +110,10 @@ export interface MenuItem {
   itemType: ItemType;
   flatPrice: number | null;
   subgroupLabel: string | null;
+  iconKey: string | null;
+  // A real uploaded photo of the dish, if set -- takes priority over the
+  // built-in icon set on the storefront.
+  imageUrl: string | null;
   toppingColors: string[] | null;
   isFeatured: boolean;
   ageRestricted: boolean;
@@ -119,6 +129,13 @@ export interface MenuCategory {
   slug: string;
   name: string;
   description: string | null;
+  // iconKey is the built-in default; iconUrl (if set) is the tenant's own
+  // uploaded image and takes priority over it on the storefront.
+  iconKey: string | null;
+  iconUrl: string | null;
+  // "gallery" | "rows" | null -- which card style the storefront uses for
+  // this category's items.
+  displayStyle: string | null;
   sortOrder: number;
   active: boolean;
 }

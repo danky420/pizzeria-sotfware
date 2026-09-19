@@ -1,5 +1,7 @@
 import {
+  adminApiPrefix,
   api,
+  ApiError,
   type ItemType,
   type MenuCategory,
   type MenuCategoryTree,
@@ -16,6 +18,13 @@ export interface CategoryInput {
   slug: string;
   name: string;
   description: string | null;
+  // One of backend/src/schemas/menu.ts's CATEGORY_ICON_KEYS, or null. The
+  // tenant's own uploaded icon (uploadIcon below) takes priority over this
+  // when both are set -- see docs/multi-tenant-branding-plan.md.
+  iconKey: string | null;
+  // One of backend/src/schemas/menu.ts's CATEGORY_DISPLAY_STYLES, or null
+  // (defaults to "rows" except the seeded "pizzas" category).
+  displayStyle: string | null;
   sortOrder: number;
   active: boolean;
 }
@@ -91,6 +100,66 @@ export const menuApi = {
   updateCategory: (id: string, input: Partial<CategoryInput>) =>
     api.patch<{ category: MenuCategory }>(`/menu/categories/${id}`, input),
   removeCategory: (id: string) => api.del<{ ok: true }>(`/menu/categories/${id}`),
+  // Not through portal-shared's `api` helper: that always JSON-encodes the
+  // body, and a file upload needs multipart/form-data -- same pattern as
+  // locationsApi.uploadLogo.
+  uploadIcon: async (categoryId: string, file: File): Promise<{ category: MenuCategory }> => {
+    const body = new FormData();
+    body.append("icon", file);
+
+    let response: Response;
+    try {
+      response = await fetch(`${adminApiPrefix()}/menu/categories/${categoryId}/icon`, {
+        method: "POST",
+        credentials: "include",
+        body
+      });
+    } catch {
+      throw new ApiError(0, "NETWORK_ERROR", "No se pudo conectar con el servidor");
+    }
+
+    const text = await response.text();
+    const payload: unknown = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      const envelope = (payload as { error?: { code?: string; message?: string; details?: unknown } })?.error;
+      throw new ApiError(
+        response.status,
+        envelope?.code ?? "INTERNAL_ERROR",
+        envelope?.message ?? "Ocurrió un error",
+        envelope?.details
+      );
+    }
+    return payload as { category: MenuCategory };
+  },
+  // Same pattern as uploadIcon above, for an individual item's own photo.
+  uploadItemImage: async (itemId: string, file: File): Promise<{ item: MenuItem }> => {
+    const body = new FormData();
+    body.append("image", file);
+
+    let response: Response;
+    try {
+      response = await fetch(`${adminApiPrefix()}/menu/items/${itemId}/image`, {
+        method: "POST",
+        credentials: "include",
+        body
+      });
+    } catch {
+      throw new ApiError(0, "NETWORK_ERROR", "No se pudo conectar con el servidor");
+    }
+
+    const text = await response.text();
+    const payload: unknown = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      const envelope = (payload as { error?: { code?: string; message?: string; details?: unknown } })?.error;
+      throw new ApiError(
+        response.status,
+        envelope?.code ?? "INTERNAL_ERROR",
+        envelope?.message ?? "Ocurrió un error",
+        envelope?.details
+      );
+    }
+    return payload as { item: MenuItem };
+  },
 
   createSizeOption: (categoryId: string, input: SizeOptionInput) =>
     api.post<{ sizeOption: SizeOption }>(`/menu/categories/${categoryId}/size-options`, input),

@@ -231,3 +231,23 @@ export function IcCafe(): JSX.Element {
     </Svg>
   );
 }
+
+/** Cuisine-neutral fallback for a category slug this icon set has no drawing
+ *  for -- a plate and crossed cutlery say "food" without implying any
+ *  particular dish, unlike defaulting to the pizza icon (see itemIcon() /
+ *  sectionIcon() in lib/menu.tsx: a future non-pizzeria tenant's own category
+ *  names, e.g. "tacos", will hit this rather than fall through to a pizza). */
+export function IcGenerico(): JSX.Element {
+  return (
+    <Svg>
+      <g stroke={T} strokeWidth="2.4" strokeLinejoin="round">
+        <circle cx="32" cy="32" r="24" fill="#F2E3C4" />
+        <circle cx="32" cy="32" r="15" fill="none" stroke="#D9C48E" strokeWidth="2" />
+      </g>
+      <g stroke={T} strokeWidth="2.2" strokeLinecap="round" fill="none">
+        <path d="M24 16v14M21.5 16v8a2.5 2.5 0 0 0 5 0v-8M24 30v18" />
+        <path d="M40 16c-2.5 0-4 2.5-4 6s1.5 6 4 6M40 16v28" />
+      </g>
+    </Svg>
+  );
+}

@@ -31,6 +31,9 @@ const EMPTY_FORM: LocationInput = {
   timezone: "America/Mexico_City",
   currency: "MXN",
   addressText: "",
+  tagline: "",
+  legalNotice: "",
+  demoNotice: "",
   colorScheme: "rojo-clasico",
   active: true
 };
@@ -50,8 +53,21 @@ export function LocationPage() {
 
   useEffect(() => {
     if (!locationQuery.data) return;
-    const { slug, name, waNumber, timezone, currency, addressText, colorScheme, active } = locationQuery.data;
-    setForm({ slug, name, waNumber, timezone, currency, addressText: addressText ?? "", colorScheme, active });
+    const { slug, name, waNumber, timezone, currency, addressText, tagline, legalNotice, demoNotice, colorScheme, active } =
+      locationQuery.data;
+    setForm({
+      slug,
+      name,
+      waNumber,
+      timezone,
+      currency,
+      addressText: addressText ?? "",
+      tagline: tagline ?? "",
+      legalNotice: legalNotice ?? "",
+      demoNotice: demoNotice ?? "",
+      colorScheme,
+      active
+    });
   }, [locationQuery.data]);
 
   const updateMutation = useMutation({
@@ -121,6 +137,31 @@ export function LocationPage() {
               <input
                 value={form.addressText}
                 onChange={(event) => setForm((prev) => ({ ...prev, addressText: event.target.value }))}
+              />
+            </Field>
+            <Field label="Eslogan" hint="Línea corta bajo el nombre en el sitio público. Vacío = no se muestra.">
+              <input
+                value={form.tagline}
+                onChange={(event) => setForm((prev) => ({ ...prev, tagline: event.target.value }))}
+              />
+            </Field>
+            <Field
+              label="Aviso legal"
+              hint='Nota corta en el pie del sitio público, ej. "Venta de cerveza únicamente a mayores de 18 años." Vacío = no se muestra.'
+            >
+              <input
+                value={form.legalNotice}
+                onChange={(event) => setForm((prev) => ({ ...prev, legalNotice: event.target.value }))}
+              />
+            </Field>
+            <Field
+              label="Nota adicional"
+              hint="Texto libre en el pie del sitio público, ej. para avisar que algunos precios se están confirmando. Vacío = no se muestra."
+            >
+              <textarea
+                rows={3}
+                value={form.demoNotice}
+                onChange={(event) => setForm((prev) => ({ ...prev, demoNotice: event.target.value }))}
               />
             </Field>
             <Field label="Zona horaria">

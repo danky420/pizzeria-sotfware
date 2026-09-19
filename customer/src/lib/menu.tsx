@@ -6,6 +6,7 @@ import {
   IcCafe,
   IcDulce,
   IcFrappe,
+  IcGenerico,
   IcLata,
   IcPasta,
   IcPizza,
@@ -20,6 +21,33 @@ import {
 const SECTION_COPY: Record<string, { intro?: string; nota?: string }> = {
   pastas: { nota: "Lasaña por pedido especial. Pregunta al ordenar." }
 };
+
+/**
+ * The built-in, cuisine-agnostic icons a category can pick without uploading
+ * its own image (CATEGORY_ICON_KEYS in backend/src/schemas/menu.ts). Icon
+ * choice is data (`category.iconKey`/`iconUrl`), not code keyed by *this*
+ * pizzeria's category slugs -- see docs/multi-tenant-branding-plan.md. A key
+ * this map doesn't recognise (unset, or one the API added later) falls back
+ * to IcGenerico, never to IcPizza: a future non-pizzeria tenant's own
+ * categories must never render as a pizza by accident.
+ */
+const ICON_BY_KEY: Record<string, (item?: MenuItem) => JSX.Element> = {
+  pizza: (item) => <IcPizza tops={item?.toppingColors} />,
+  burger: () => <IcBurger />,
+  wings: () => <IcWing />,
+  pasta: () => <IcPasta />,
+  dessert: () => <IcDulce />,
+  frappe: () => <IcFrappe />,
+  coffee: () => <IcCafe />,
+  bottle: () => <IcBotella />,
+  can: () => <IcLata />,
+  generic: () => <IcGenerico />
+};
+
+function builtinIcon(iconKey: string | null, item?: MenuItem): JSX.Element {
+  const render = ICON_BY_KEY[iconKey ?? "generic"];
+  return render ? render(item) : <IcGenerico />;
+}
 
 const NAV_LABEL: Record<string, string> = {
   hamburguesas: "Burgers",
@@ -45,44 +73,33 @@ export function cartName(categorySlug: string, item: MenuItem, size?: SizeOption
   return `${prefix}${item.name}${tail}`;
 }
 
-export function itemIcon(categorySlug: string, item: MenuItem): JSX.Element {
-  switch (categorySlug) {
-    case "hamburguesas":
-      return <IcBurger />;
-    case "alitas":
-      return <IcWing />;
-    case "pastas":
-      return <IcPasta />;
-    case "postres":
-      return <IcDulce />;
-    case "frappes":
-      return item.subgroupLabel === "Cafés y tés" ? <IcCafe /> : <IcFrappe />;
-    case "bebidas":
-      return item.ageRestricted ? <IcLata /> : <IcBotella />;
-    default:
-      return <IcPizza tops={item.toppingColors} />;
-  }
+/** A tenant's own uploaded image always wins over the built-in icon set --
+ *  see docs/multi-tenant-branding-plan.md. Decorative: the item/category name
+ *  is shown as text right next to it, so alt is empty rather than repeating it. */
+function uploadedIcon(iconUrl: string): JSX.Element {
+  return <img src={iconUrl} alt="" style={{ objectFit: "contain" }} />;
+}
+
+export function itemIcon(category: MenuCategory, item: MenuItem): JSX.Element {
+  // A real photo of this specific dish beats a category-wide uploaded image,
+  // which beats every symbolic icon below -- most specific real thing wins.
+  if (item.imageUrl) return uploadedIcon(item.imageUrl);
+  if (category.iconUrl) return uploadedIcon(category.iconUrl);
+  // Generalizes regardless of category: an age-restricted item (beer alongside
+  // soft drinks in one "bebidas" category, here, but the rule isn't specific
+  // to that category) always gets the "can" icon over the category's own
+  // default, same visual cue any tenant marking items 18+ would want.
+  if (item.ageRestricted) return builtinIcon("can");
+  // The item's own iconKey overrides the category default when set -- e.g. a
+  // coffee item inside an otherwise frappé-iconed category.
+  return builtinIcon(item.iconKey ?? category.iconKey, item);
 }
 
 /** One representative icon per top-level category, for the section heading —
  * distinct from `itemIcon`, which varies per row/card within a section. */
-export function sectionIcon(categorySlug: string): JSX.Element {
-  switch (categorySlug) {
-    case "hamburguesas":
-      return <IcBurger />;
-    case "alitas":
-      return <IcWing />;
-    case "pastas":
-      return <IcPasta />;
-    case "postres":
-      return <IcDulce />;
-    case "frappes":
-      return <IcFrappe />;
-    case "bebidas":
-      return <IcBotella />;
-    default:
-      return <IcPizza tops={["#C7342A", "#F2C93B", "#6E9B3C"]} />;
-  }
+export function sectionIcon(category: MenuCategory): JSX.Element {
+  if (category.iconUrl) return uploadedIcon(category.iconUrl);
+  return builtinIcon(category.iconKey);
 }
 
 export function isMatrixCategory(category: MenuCategory): boolean {

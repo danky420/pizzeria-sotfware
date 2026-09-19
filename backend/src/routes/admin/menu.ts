@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import fastifyMultipart from "@fastify/multipart";
 import type { FastifyInstance } from "fastify";
 import { BACK_OFFICE_ROLES, requireAuth, requireRole } from "../../auth/middleware.js";
 import { prisma } from "../../db/prisma.js";
@@ -60,9 +61,18 @@ const itemInclude = {
   optionGroups: { orderBy: { sortOrder: "asc" }, include: { choices: { orderBy: { sortOrder: "asc" } } } }
 } satisfies Prisma.MenuItemInclude;
 
+// Same reasoning as locations.ts's logo upload: independent of app.ts's global
+// 128 KB JSON bodyLimit (multipart streams itself), SVG excluded from the mime
+// whitelist for the same XSS reasoning, smaller cap than a location logo since
+// a category icon renders at icon size, not full-width.
+const CATEGORY_ICON_MAX_BYTES = 1 * 1024 * 1024;
+const ALLOWED_CATEGORY_ICON_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
 export default async function adminMenuRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAuth);
   app.addHook("preHandler", requireRole(...BACK_OFFICE_ROLES));
+
+  await app.register(fastifyMultipart, { limits: { fileSize: CATEGORY_ICON_MAX_BYTES } });
 
   app.get("/locations/:id/menu", async (request) => {
     const { id } = idParams.parse(request.params);
@@ -116,6 +126,39 @@ export default async function adminMenuRoutes(app: FastifyInstance): Promise<voi
     await loadCategory(request, id);
     await prisma.menuCategory.delete({ where: { id } });
     return { ok: true };
+  });
+
+  // Same content-addressed pattern as the location logo upload: a new upload
+  // creates a new CategoryIcon row and repoints iconAssetId rather than
+  // mutating bytes in place, which is what makes the public route's immutable
+  // cache header safe.
+  app.post("/menu/categories/:id/icon", async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    await loadCategory(request, id);
+
+    const file = await request.file();
+    if (!file) throw badRequest("No file uploaded");
+    if (!ALLOWED_CATEGORY_ICON_MIME_TYPES.has(file.mimetype)) {
+      throw badRequest("Unsupported image type. Use PNG, JPEG or WEBP.");
+    }
+
+    const buffer = await file.toBuffer();
+
+    const asset = await prisma.categoryIcon.create({
+      data: {
+        categoryId: id,
+        mimeType: file.mimetype,
+        data: Uint8Array.from(buffer),
+        size: buffer.length
+      }
+    });
+
+    const category = await prisma.menuCategory.update({
+      where: { id },
+      data: { iconAssetId: asset.id }
+    });
+
+    return reply.status(201).send({ category: presentCategory(category) });
   });
 
   app.get("/menu/categories/:id/size-options", async (request) => {
@@ -259,6 +302,37 @@ export default async function adminMenuRoutes(app: FastifyInstance): Promise<voi
     await loadItem(request, id);
     await prisma.menuItem.delete({ where: { id } });
     return { ok: true };
+  });
+
+  // Same content-addressed pattern as the category icon upload above -- a
+  // new upload creates a new MenuItemImage row and repoints imageAssetId.
+  app.post("/menu/items/:id/image", async (request, reply) => {
+    const { id } = idParams.parse(request.params);
+    await loadItem(request, id);
+
+    const file = await request.file();
+    if (!file) throw badRequest("No file uploaded");
+    if (!ALLOWED_CATEGORY_ICON_MIME_TYPES.has(file.mimetype)) {
+      throw badRequest("Unsupported image type. Use PNG, JPEG or WEBP.");
+    }
+
+    const buffer = await file.toBuffer();
+
+    const asset = await prisma.menuItemImage.create({
+      data: {
+        itemId: id,
+        mimeType: file.mimetype,
+        data: Uint8Array.from(buffer),
+        size: buffer.length
+      }
+    });
+
+    const item = await prisma.menuItem.update({
+      where: { id },
+      data: { imageAssetId: asset.id }
+    });
+
+    return reply.status(201).send({ item: presentItem(item) });
   });
 
   app.patch("/menu/items/:id/price", async (request) => {

@@ -73,7 +73,8 @@ export function App(): JSX.Element {
           name: location.name,
           colorScheme: location.colorScheme,
           logoUrl: location.logoUrl,
-          waNumber: location.waNumber
+          waNumber: location.waNumber,
+          tagline: location.tagline
         });
         setMenu(menuResponse);
         setHours(hoursResponse);
@@ -92,6 +93,7 @@ export function App(): JSX.Element {
   const brandName = location?.name ?? cachedBranding?.name ?? DEFAULT_NAME;
   const logoUrl = location?.logoUrl ?? cachedBranding?.logoUrl ?? null;
   const failoverWaNumber = location?.waNumber ?? cachedBranding?.waNumber ?? null;
+  const tagline = location?.tagline ?? cachedBranding?.tagline ?? null;
 
   // The <title> and description can't be templated server-side (no SSR here),
   // so the seeded defaults in index.html hold until this runs -- see
@@ -105,6 +107,15 @@ export function App(): JSX.Element {
         "content",
         `Pide en línea en ${location.name}${location.addressText ? ` — ${location.addressText}` : ""}.`
       );
+    // The browser tab icon and "add to home screen" icon are still the
+    // static seeded default (index.html's <link>s) until this runs -- same
+    // acknowledged first-paint limitation as the <title>/description above,
+    // no SSR to template them at request time.
+    if (location.logoUrl) {
+      document.querySelector('link[rel="icon"]')?.setAttribute("href", location.logoUrl);
+      document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute("href", location.logoUrl);
+    }
+    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute("content", location.name);
   }, [location]);
 
   const sections = useMemo(() => (menu ? buildSections(menu.categories) : []), [menu]);
@@ -215,7 +226,7 @@ export function App(): JSX.Element {
             ) : null}
             <div className="hero-texto">
               <h1>{brandName}</h1>
-              <p className="hero-tag">Pizza de horno, hecha en Maltrata.</p>
+              {tagline ? <p className="hero-tag">{tagline}</p> : null}
             </div>
           </div>
           <div className="cab-info">
@@ -313,12 +324,8 @@ export function App(): JSX.Element {
             ) : null}
           </p>
         ) : null}
-        <p>Venta de cerveza únicamente a mayores de 18 años.</p>
-        <div className="demo">
-          <strong>Versión de prueba.</strong> Los platillos y precios se tomaron del menú impreso de
-          la casa. Algunos renglones venían sin precio (refresco 400 ml, botella de agua,
-          micheladas) y aparecen marcados para completarse.
-        </div>
+        {location?.legalNotice ? <p>{location.legalNotice}</p> : null}
+        {location?.demoNotice ? <div className="demo">{location.demoNotice}</div> : null}
         <button
           className="tema"
           type="button"
