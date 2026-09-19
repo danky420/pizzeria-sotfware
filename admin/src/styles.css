@@ -230,6 +230,16 @@ code {
   gap: 16px;
 }
 
+/* .shell-main's gap only spaces its own direct children -- a page that
+   wraps its header and panels in this div (rather than using a Fragment,
+   like most pages do) loses that spacing entirely unless this matches it,
+   which is what left Usuarios' two panels flush against each other. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .centered-screen {
   min-height: 100vh;
   display: flex;
@@ -469,20 +479,29 @@ textarea {
   min-height: 60px;
 }
 
+/* Not flex: a flex column's cross-axis "stretch" is how the input got its
+   width before, and on an actual iPhone the native date-input widget still
+   rendered a few px wider than the stretched box (Chromium, the only engine
+   available to test against here, always got this right, which is how the
+   previous fixes shipped without catching it). Plain block flow's width:
+   100% is resolved directly against the containing block with no
+   stretch-vs-intrinsic-content ambiguity for a native control to get wrong. */
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: block;
   min-width: 0;
 }
 
 .field-label {
+  display: block;
+  margin-bottom: 4px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .field-hint {
+  display: block;
+  margin-top: 4px;
   font-size: 12px;
   color: var(--text-muted);
 }
