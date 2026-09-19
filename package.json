@@ -26,7 +26,8 @@
     "prisma": "npm run prisma --workspace backend --",
     "migrate": "npm run migrate --workspace backend",
     "migrate:deploy": "npm run migrate:deploy --workspace backend",
-    "seed": "npm run seed --workspace backend"
+    "seed": "npm run seed --workspace backend",
+    "onboard": "tsx scripts/onboard.ts"
   },
   "engines": {
     "node": ">=20"

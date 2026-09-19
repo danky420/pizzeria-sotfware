@@ -115,3 +115,7 @@ logs/
 Thumbs.db
 ehthumbs.db
 desktop.ini
+
+# Local state (pids, logs) for scripts/onboard.ts's dry-run tenants -- never
+# committed, and holds nothing that should survive past the local machine.
+.onboard/
