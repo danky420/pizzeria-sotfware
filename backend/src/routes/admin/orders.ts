@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { currentUser, ORDER_ROLES, requireAuth, requireRole } from "../../auth/middleware.js";
+import { BACK_OFFICE_ROLES, currentUser, ORDER_ROLES, requireAuth, requireRole } from "../../auth/middleware.js";
 import { notFound } from "../../lib/http-error.js";
 import { presentMenuTree, presentOrder } from "../../lib/present.js";
 import { loadLocation, loadOrder } from "../../lib/scope.js";
@@ -18,6 +18,12 @@ export default async function adminOrderRoutes(app: FastifyInstance): Promise<vo
   app.addHook("preHandler", requireAuth);
   app.addHook("preHandler", requireRole(...ORDER_ROLES));
 
+  // Who edited an order and why is a back-office concern, not something a
+  // STAFF session gets to see -- they can still make the edit itself.
+  function canSeeEditHistory(request: Parameters<typeof currentUser>[0]): boolean {
+    return (BACK_OFFICE_ROLES as string[]).includes(currentUser(request).role);
+  }
+
   app.get("/locations/:id/orders", async (request) => {
     const { id } = idParams.parse(request.params);
     const query = orderListQuery.parse(request.query);
@@ -25,7 +31,7 @@ export default async function adminOrderRoutes(app: FastifyInstance): Promise<vo
 
     const page = await listOrders(id, query);
     return {
-      orders: page.orders.map(presentOrder),
+      orders: page.orders.map((order) => presentOrder(order, { includeEdits: canSeeEditHistory(request) })),
       pagination: {
         page: page.page,
         pageSize: page.pageSize,
@@ -42,7 +48,7 @@ export default async function adminOrderRoutes(app: FastifyInstance): Promise<vo
     await loadOrder(request, id);
     const order = await getOrder(id);
     if (!order) throw notFound("Order not found");
-    return { order: presentOrder(order) };
+    return { order: presentOrder(order, { includeEdits: canSeeEditHistory(request) }) };
   });
 
   app.patch("/orders/:id/status", async (request) => {
@@ -62,7 +68,7 @@ export default async function adminOrderRoutes(app: FastifyInstance): Promise<vo
     const { order } = await editOrder(id, currentUser(request).id, body);
     const fresh = await getOrder(id);
     if (!fresh) throw notFound("Order not found");
-    return { order: presentOrder(fresh) };
+    return { order: presentOrder(fresh, { includeEdits: canSeeEditHistory(request) }) };
   });
 
   // Menu data for the "add an item" picker when editing an order -- ORDER_ROLES

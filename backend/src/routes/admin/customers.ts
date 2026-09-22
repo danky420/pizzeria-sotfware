@@ -66,6 +66,6 @@ export default async function adminCustomerRoutes(app: FastifyInstance): Promise
       include: { items: { orderBy: { createdAt: "asc" } } }
     });
 
-    return { customer: presentCustomer(customer), orders: orders.map(presentOrder) };
+    return { customer: presentCustomer(customer), orders: orders.map((order) => presentOrder(order)) };
   });
 }

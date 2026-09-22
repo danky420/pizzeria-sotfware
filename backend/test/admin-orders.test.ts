@@ -261,10 +261,18 @@ describe.skipIf(!databaseReady)("admin orders", () => {
       const order = response.json().order;
       expect(order.subtotal).toBe(210); // 1x180 + 1x30
       expect(order.total).toBe(210);
-      expect(order.edits).toHaveLength(1);
-      expect(order.edits[0].reason).toBe("El cliente solo quería una pizza.");
-      expect(order.edits[0].editedBy.name).toBe("Staff A");
-      expect(order.edits[0].changes).toEqual([
+      // The edit response is to the STAFF session that made it -- history is
+      // a back-office concern, so this session doesn't get it back here even
+      // for the edit it just made. Confirm what was actually recorded via an
+      // owner session instead.
+      expect(order.edits).toEqual([]);
+
+      const asOwner = await get(`/api/admin/orders/${orderIds[2]}`, ownerA);
+      const recorded = asOwner.json().order.edits;
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0].reason).toBe("El cliente solo quería una pizza.");
+      expect(recorded[0].editedBy.name).toBe("Staff A");
+      expect(recorded[0].changes).toEqual([
         expect.objectContaining({ type: "quantity_changed", from: 2, to: 1 })
       ]);
 
@@ -299,7 +307,12 @@ describe.skipIf(!databaseReady)("admin orders", () => {
       const order = response.json().order;
       expect(order.items).toHaveLength(2);
       expect(order.subtotal).toBe(210); // 180 (pizza) + 30 (new refresco)
-      expect(order.edits[0].changes).toEqual([expect.objectContaining({ type: "item_added", quantity: 1 })]);
+      expect(order.edits).toEqual([]); // STAFF session -- see the test above
+
+      const asOwner = await get(`/api/admin/orders/${orderIds[2]}`, ownerA);
+      expect(asOwner.json().order.edits[0].changes).toEqual([
+        expect.objectContaining({ type: "item_added", quantity: 1 })
+      ]);
     });
 
     it("recomputes an order-scoped promotion's discount against the new subtotal, not the old one", async () => {
@@ -321,6 +334,26 @@ describe.skipIf(!databaseReady)("admin orders", () => {
       expect(order.subtotal).toBe(210); // 1x180 + 1x30
       expect(order.discountTotal).toBe(21); // still 10%, of the NEW subtotal
       expect(order.total).toBe(189);
+    });
+
+    it("hides edit history from STAFF but shows it to an owner/manager", async () => {
+      // orderIds[2] already picked up edits from the tests above.
+      const asStaff = await get(`/api/admin/orders/${orderIds[2]}`, staffA);
+      expect(asStaff.statusCode).toBe(200);
+      expect(asStaff.json().order.edits).toEqual([]);
+
+      const asOwner = await get(`/api/admin/orders/${orderIds[2]}`, ownerA);
+      expect(asOwner.json().order.edits.length).toBeGreaterThan(0);
+    });
+
+    it("also hides edit history from STAFF in the response to their own edit", async () => {
+      const response = await edit(
+        orderIds[2],
+        { reason: "prueba de visibilidad", changes: [{ type: "add_item", menuItemId: fixture.refrescoId, quantity: 1 }] },
+        staffA
+      );
+      expect(response.statusCode).toBe(200);
+      expect(response.json().order.edits).toEqual([]);
     });
 
     it("rejects an edit with no reason", async () => {
