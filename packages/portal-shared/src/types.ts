@@ -193,6 +193,31 @@ export interface OrderItem {
   lineTotal: number;
 }
 
+// One line in an OrderEdit's `changes` -- a human-readable record of what
+// moved, not a full before/after row dump. Mirrors OrderEditChangeSummary in
+// backend/src/services/order-edits.ts.
+export type OrderEditChange =
+  | {
+      type: "quantity_changed";
+      orderItemId: string;
+      name: string;
+      detail: string | null;
+      from: number;
+      to: number;
+    }
+  | { type: "item_removed"; orderItemId: string; name: string; detail: string | null; quantity: number }
+  | { type: "item_added"; name: string; detail: string | null; quantity: number; unitPrice: number };
+
+export interface OrderEdit {
+  id: string;
+  reason: string;
+  changes: OrderEditChange[];
+  previousTotal: number;
+  newTotal: number;
+  editedBy: { id: string; name: string } | null;
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: number;
@@ -210,6 +235,7 @@ export interface Order {
   promotionId: string | null;
   createdAt: string;
   items: OrderItem[];
+  edits: OrderEdit[];
 }
 
 export interface Pagination {

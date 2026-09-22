@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import { ORDER_ROLES, requireAuth, requireRole } from "../../auth/middleware.js";
+import { currentUser, ORDER_ROLES, requireAuth, requireRole } from "../../auth/middleware.js";
 import { notFound } from "../../lib/http-error.js";
-import { presentOrder } from "../../lib/present.js";
+import { presentMenuTree, presentOrder } from "../../lib/present.js";
 import { loadLocation, loadOrder } from "../../lib/scope.js";
-import { idParams, orderListQuery, patchOrderStatusBody } from "../../schemas/index.js";
+import { editOrderBody, idParams, orderListQuery, patchOrderStatusBody } from "../../schemas/index.js";
+import { editOrder } from "../../services/order-edits.js";
 import { ORDER_STATUS_FLOW, getOrder, listOrders, updateOrderStatus } from "../../services/orders.js";
+import { loadMenuTree } from "../../services/menu.js";
 
 /**
  * The one admin area STAFF is allowed into: an employee works the orders queue
@@ -50,5 +52,28 @@ export default async function adminOrderRoutes(app: FastifyInstance): Promise<vo
 
     const order = await updateOrderStatus(id, existing.status, body.status);
     return { order: presentOrder(order), allowedNext: ORDER_STATUS_FLOW[order.status] };
+  });
+
+  app.post("/orders/:id/edits", async (request) => {
+    const { id } = idParams.parse(request.params);
+    const body = editOrderBody.parse(request.body);
+    await loadOrder(request, id);
+
+    const { order } = await editOrder(id, currentUser(request).id, body);
+    const fresh = await getOrder(id);
+    if (!fresh) throw notFound("Order not found");
+    return { order: presentOrder(fresh) };
+  });
+
+  // Menu data for the "add an item" picker when editing an order -- ORDER_ROLES
+  // (STAFF included), unlike GET /locations/:id/menu which is BACK_OFFICE_ROLES
+  // only. includeHidden: false because staff shouldn't add something that's
+  // been pulled from the live menu, the same view a customer ordering right
+  // now would see.
+  app.get("/locations/:id/orders/menu", async (request) => {
+    const { id } = idParams.parse(request.params);
+    await loadLocation(request, id);
+    const categories = await loadMenuTree(id);
+    return { categories: presentMenuTree(categories, { includeHidden: false }) };
   });
 }

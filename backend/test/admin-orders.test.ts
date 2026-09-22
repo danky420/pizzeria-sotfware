@@ -236,4 +236,134 @@ describe.skipIf(!databaseReady)("admin orders", () => {
       expect(untouched.status).toBe("PENDING");
     });
   });
+
+  describe("editing", () => {
+    const edit = (id: string, payload: Record<string, unknown>, cookie: string) =>
+      app.inject({ method: "POST", url: `/api/admin/orders/${id}/edits`, headers: { cookie }, payload });
+
+    // orderIds[2] is still PENDING at this point -- the status-change tests
+    // above only ever touched orderIds[0] (walked to COMPLETED) and
+    // orderIds[1] (CANCELLED). Its two lines: 2x pizza (grande/tradicional,
+    // $180) + 1x refresco ($30) = $390.
+
+    it("STAFF reduces a quantity, the total recalculates, and the customer's lifetime spend adjusts", async () => {
+      const pizzaLine = await prisma.orderItem.findFirstOrThrow({
+        where: { orderId: orderIds[2], menuItemId: fixture.pizzaId }
+      });
+      const customerBefore = await prisma.customer.findFirstOrThrow({ where: { phone: "2722603539" } });
+
+      const response = await edit(
+        orderIds[2],
+        { reason: "El cliente solo quería una pizza.", changes: [{ type: "set_quantity", orderItemId: pizzaLine.id, quantity: 1 }] },
+        staffA
+      );
+      expect(response.statusCode).toBe(200);
+      const order = response.json().order;
+      expect(order.subtotal).toBe(210); // 1x180 + 1x30
+      expect(order.total).toBe(210);
+      expect(order.edits).toHaveLength(1);
+      expect(order.edits[0].reason).toBe("El cliente solo quería una pizza.");
+      expect(order.edits[0].editedBy.name).toBe("Staff A");
+      expect(order.edits[0].changes).toEqual([
+        expect.objectContaining({ type: "quantity_changed", from: 2, to: 1 })
+      ]);
+
+      const customerAfter = await prisma.customer.findFirstOrThrow({ where: { phone: "2722603539" } });
+      expect(Number(customerAfter.totalSpent)).toBe(Number(customerBefore.totalSpent) - 180);
+    });
+
+    it("removes a line entirely at quantity 0", async () => {
+      const refrescoLine = await prisma.orderItem.findFirstOrThrow({
+        where: { orderId: orderIds[2], menuItemId: fixture.refrescoId }
+      });
+
+      const response = await edit(
+        orderIds[2],
+        { reason: "Se le olvidó cancelar el refresco.", changes: [{ type: "set_quantity", orderItemId: refrescoLine.id, quantity: 0 }] },
+        ownerA
+      );
+      expect(response.statusCode).toBe(200);
+      const order = response.json().order;
+      expect(order.items).toHaveLength(1);
+      expect(order.subtotal).toBe(180);
+      expect(order.edits[0].changes).toEqual([expect.objectContaining({ type: "item_removed" })]);
+    });
+
+    it("adds a new item and recalculates the total", async () => {
+      const response = await edit(
+        orderIds[2],
+        { reason: "El cliente pidió otro refresco.", changes: [{ type: "add_item", menuItemId: fixture.refrescoId, quantity: 1 }] },
+        staffA
+      );
+      expect(response.statusCode).toBe(200);
+      const order = response.json().order;
+      expect(order.items).toHaveLength(2);
+      expect(order.subtotal).toBe(210); // 180 (pizza) + 30 (new refresco)
+      expect(order.edits[0].changes).toEqual([expect.objectContaining({ type: "item_added", quantity: 1 })]);
+    });
+
+    it("recomputes an order-scoped promotion's discount against the new subtotal, not the old one", async () => {
+      const id = await submitOrder(
+        { name: "Dana Vega", phone: "2722603540", address: "Calle 8 #3" },
+        { promotionCode: "DIEZ" }
+      );
+      const before = await get(`/api/admin/orders/${id}`, ownerA);
+      expect(before.json().order.total).toBe(351); // 390 - 10%
+
+      const pizzaLine = await prisma.orderItem.findFirstOrThrow({ where: { orderId: id, menuItemId: fixture.pizzaId } });
+      const response = await edit(
+        id,
+        { reason: "Se canceló una pizza.", changes: [{ type: "set_quantity", orderItemId: pizzaLine.id, quantity: 1 }] },
+        ownerA
+      );
+      expect(response.statusCode).toBe(200);
+      const order = response.json().order;
+      expect(order.subtotal).toBe(210); // 1x180 + 1x30
+      expect(order.discountTotal).toBe(21); // still 10%, of the NEW subtotal
+      expect(order.total).toBe(189);
+    });
+
+    it("rejects an edit with no reason", async () => {
+      const pizzaLine = await prisma.orderItem.findFirstOrThrow({ where: { orderId: orderIds[2] } });
+      const response = await edit(orderIds[2], { reason: "", changes: [{ type: "set_quantity", orderItemId: pizzaLine.id, quantity: 1 }] }, ownerA);
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects an edit referencing an item that isn't on this order", async () => {
+      const response = await edit(
+        orderIds[2],
+        { reason: "intento inválido", changes: [{ type: "set_quantity", orderItemId: "not-a-real-line", quantity: 1 }] },
+        ownerA
+      );
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("refuses to edit a completed order", async () => {
+      const response = await edit(
+        orderIds[0],
+        { reason: "demasiado tarde", changes: [{ type: "add_item", menuItemId: fixture.refrescoId, quantity: 1 }] },
+        ownerA
+      );
+      expect(response.statusCode).toBe(409);
+      expect(response.json().error.code).toBe("CONFLICT");
+    });
+
+    it("refuses to edit another location's order", async () => {
+      const response = await edit(
+        orderIds[2],
+        { reason: "cross-tenant", changes: [{ type: "add_item", menuItemId: fixture.refrescoId, quantity: 1 }] },
+        ownerB
+      );
+      expect(response.statusCode).toBe(403);
+    });
+  });
+
+  describe("editing menu (add-item picker)", () => {
+    it("lets STAFF fetch the location's menu for the add-item picker", async () => {
+      const response = await get(`/api/admin/locations/${fixture.locationA.id}/orders/menu`, staffA);
+      expect(response.statusCode).toBe(200);
+      expect(response.json().categories.length).toBeGreaterThan(0);
+    });
+  });
 });

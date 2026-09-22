@@ -61,6 +61,46 @@ export type SubmitOrderLine = SubmitOrderBody["items"][number];
 export const patchOrderStatusBody = z.object({ status: orderStatusSchema });
 export type PatchOrderStatusBody = z.infer<typeof patchOrderStatusBody>;
 
+/**
+ * Editing an already-placed order: staff correcting a mistake, or a customer
+ * calling to change what they ordered. Two change shapes only —
+ *
+ *   - set_quantity: change (or, at 0, remove) a line already on the order.
+ *   - add_item: add a new one, by menuItemId only (not itemSlug) because this
+ *     is a picker built from the same menu data the SPA already fetched, not
+ *     a public API surface that needs a slug fallback.
+ *
+ * `reason` is mandatory — the whole point is that an edit always carries a
+ * note explaining why, not just what changed.
+ */
+export const setQuantityChange = z.object({
+  type: z.literal("set_quantity"),
+  orderItemId: idSchema,
+  quantity: z.number().int().min(0).max(MAX_LINE_QUANTITY)
+});
+
+export const addOrderItemChange = z.object({
+  type: z.literal("add_item"),
+  menuItemId: idSchema,
+  sizeOptionId: idSchema.optional(),
+  sizeSlug: z.string().trim().min(1).max(64).optional(),
+  styleOptionId: idSchema.optional(),
+  styleSlug: z.string().trim().min(1).max(64).optional(),
+  optionChoiceId: idSchema.optional(),
+  optionChoiceName: z.string().trim().min(1).max(120).optional(),
+  quantity: z.number().int().min(1).max(MAX_LINE_QUANTITY),
+  notes: z.string().trim().max(200).optional()
+});
+
+export const editOrderChange = z.discriminatedUnion("type", [setQuantityChange, addOrderItemChange]);
+export type EditOrderChange = z.infer<typeof editOrderChange>;
+
+export const editOrderBody = z.object({
+  reason: z.string().trim().min(1).max(500),
+  changes: z.array(editOrderChange).min(1).max(MAX_ORDER_LINES)
+});
+export type EditOrderBody = z.infer<typeof editOrderBody>;
+
 // Public order-tracking lookup: phone + order number together, never phone
 // alone — see docs/order-tracking-plan.md. orderNumber arrives as a query
 // string, hence coerce.

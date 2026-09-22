@@ -141,8 +141,9 @@ model AdminUser {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  location Location?      @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  sessions AdminSession[]
+  location   Location?      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  sessions   AdminSession[]
+  orderEdits OrderEdit[]
 
   @@index([locationId])
 }
@@ -441,6 +442,7 @@ model Order {
   customer  Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   promotion Promotion?  @relation(fields: [promotionId], references: [id], onDelete: SetNull)
   items     OrderItem[]
+  edits     OrderEdit[]
 
   @@index([locationId, createdAt])
   @@index([customerId])
@@ -466,4 +468,27 @@ model OrderItem {
 
   @@index([orderId])
   @@index([menuItemId])
+}
+
+// Every change made to an order after it was placed -- an employee correcting
+// a mistake, a customer calling to change what they ordered. `reason` is
+// mandatory at the API layer (never enforced here, since a DB-level NOT NULL
+// still allows an empty string); `changes` is a human-readable structured
+// summary of what moved (item added/removed, quantity changed), not a full
+// before/after row dump -- see OrderEditChangeSummary in
+// services/order-edits.ts for the shape.
+model OrderEdit {
+  id            String   @id @default(cuid())
+  orderId       String
+  editedById    String
+  reason        String
+  changes       Json
+  previousTotal Decimal  @db.Decimal(12, 2)
+  newTotal      Decimal  @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  editedBy AdminUser @relation(fields: [editedById], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
 }
