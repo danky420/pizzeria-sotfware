@@ -11,6 +11,7 @@ import type {
   MenuItemOptionGroup,
   MenuItemPriceCell,
   Order,
+  OrderEdit,
   OrderItem,
   Promotion
 } from "@prisma/client";
@@ -278,7 +279,34 @@ export function presentOrderTracking(order: Order & { items?: OrderItem[] }) {
   };
 }
 
-export function presentOrder(order: Order & { items?: OrderItem[] }) {
+export function presentOrderEdit(edit: OrderEdit & { editedBy?: { id: string; name: string } | null }) {
+  return {
+    id: edit.id,
+    reason: edit.reason,
+    // Already a plain-JSON structured summary at write time (see
+    // OrderEditChangeSummary in services/order-edits.ts) -- nothing here
+    // needs unwrapping the way a Decimal field does.
+    changes: edit.changes,
+    previousTotal: decimalToNumber(edit.previousTotal),
+    newTotal: decimalToNumber(edit.newTotal),
+    editedBy: edit.editedBy ?? null,
+    createdAt: edit.createdAt
+  };
+}
+
+export function presentOrder(
+  order: Order & {
+    items?: OrderItem[];
+    edits?: (OrderEdit & { editedBy?: { id: string; name: string } | null })[];
+  },
+  // Edit history is a back-office concern -- who changed a price/quantity
+  // and why is not something a STAFF session gets to see, only that it's
+  // possible to make those changes at all. Defaults on so the public/order
+  // creation path (which never fetches edits anyway) doesn't have to
+  // think about this.
+  options: { includeEdits?: boolean } = {}
+) {
+  const includeEdits = options.includeEdits ?? true;
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -295,6 +323,7 @@ export function presentOrder(order: Order & { items?: OrderItem[] }) {
     total: decimalToNumber(order.total),
     promotionId: order.promotionId,
     createdAt: order.createdAt,
-    items: (order.items ?? []).map(presentOrderItem)
+    items: (order.items ?? []).map(presentOrderItem),
+    edits: includeEdits ? (order.edits ?? []).map(presentOrderEdit) : []
   };
 }

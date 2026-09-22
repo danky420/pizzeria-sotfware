@@ -22,6 +22,7 @@ async function probe(): Promise<boolean> {
 export const databaseReady = await probe();
 
 const TABLES = [
+  "OrderEdit",
   "OrderItem",
   "Order",
   "Customer",

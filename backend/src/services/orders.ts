@@ -60,7 +60,15 @@ export function assertTransition(from: OrderStatus, to: OrderStatus): void {
 
 const orderInclude = { items: { orderBy: { createdAt: "asc" } } } satisfies Prisma.OrderInclude;
 
+// Edit history only for the single-order detail view -- the queue lists many
+// rows at once and has no use for it, so leave it off that query entirely.
+const orderDetailInclude = {
+  items: { orderBy: { createdAt: "asc" } },
+  edits: { orderBy: { createdAt: "desc" }, include: { editedBy: { select: { id: true, name: true } } } }
+} satisfies Prisma.OrderInclude;
+
 export type OrderWithItems = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
+export type OrderWithDetail = Prisma.OrderGetPayload<{ include: typeof orderDetailInclude }>;
 
 export interface OrderPage {
   orders: OrderWithItems[];
@@ -144,8 +152,8 @@ export async function listOrders(locationId: string, query: OrderListQuery): Pro
   return { orders, total, page: query.page, pageSize: query.pageSize };
 }
 
-export function getOrder(orderId: string): Promise<OrderWithItems | null> {
-  return prisma.order.findUnique({ where: { id: orderId }, include: orderInclude });
+export function getOrder(orderId: string): Promise<OrderWithDetail | null> {
+  return prisma.order.findUnique({ where: { id: orderId }, include: orderDetailInclude });
 }
 
 /**

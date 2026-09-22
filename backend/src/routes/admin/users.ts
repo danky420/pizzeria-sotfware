@@ -1,4 +1,4 @@
-import type { AdminRole } from "@prisma/client";
+import { Prisma, type AdminRole } from "@prisma/client";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { hashPassword } from "../../auth/hash.js";
 import {
@@ -9,7 +9,7 @@ import {
 } from "../../auth/middleware.js";
 import { destroyAllSessionsForUser } from "../../auth/session.js";
 import { prisma } from "../../db/prisma.js";
-import { forbidden } from "../../lib/http-error.js";
+import { conflict, forbidden } from "../../lib/http-error.js";
 import { presentUser } from "../../lib/present.js";
 import { loadAdminUser, loadLocation } from "../../lib/scope.js";
 import { createUserBody, idParams, updateUserBody } from "../../schemas/index.js";
@@ -96,7 +96,17 @@ export default async function adminUserRoutes(app: FastifyInstance): Promise<voi
       throw forbidden("You cannot delete your own account");
     }
 
-    await prisma.adminUser.delete({ where: { id } });
+    try {
+      await prisma.adminUser.delete({ where: { id } });
+    } catch (error) {
+      // OrderEdit.editedBy is onDelete: Restrict -- an account that has ever
+      // corrected an order keeps that attribution rather than going anonymous
+      // because the account was later removed. Deactivate it instead.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+        throw conflict("This account has edited orders and can't be deleted — deactivate it instead");
+      }
+      throw error;
+    }
     return { ok: true };
   });
 }
