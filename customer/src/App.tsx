@@ -272,7 +272,7 @@ export function App(): JSX.Element {
         <div className="nav-top">
           <button
             type="button"
-            className="nav-top-menu"
+            className="nav-top-menu on"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           >
             Menú

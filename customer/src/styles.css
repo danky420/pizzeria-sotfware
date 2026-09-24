@@ -165,26 +165,18 @@ img{max-width:100%; display:block}
   display:flex; align-items:center; justify-content:center; gap:20px;
   background:var(--rojo); padding:10px 20px;
 }
-.nav-top-menu{
-  border:0; background:none; padding:0; font:inherit; cursor:pointer;
-  font-weight:700; font-size:.95rem; color:#FFF3DE; text-transform:uppercase; letter-spacing:.02em;
-  text-decoration:none;
+/* Plain text, not buttons -- no fill, no pill, no border. Whichever of the
+   two is the current page just gets a solid underline (.on); the other
+   stays plain. Same rule on both elements so "Menú" and "Rastrear pedido"
+   read as one consistent pair, not two different kinds of thing. */
+.nav-top-menu, .nav-top-track{
+  border:0; background:none; padding:4px 0; font:inherit; cursor:pointer;
+  font-weight:700; font-size:.85rem; color:rgba(255,243,222,.75); text-transform:uppercase; letter-spacing:.02em;
+  text-decoration:none; border-bottom:2px solid transparent;
+  transition:color .15s ease, border-color .15s ease;
 }
-.nav-top-menu:hover{color:#fff}
-/* A solid light pill against the red bar, the same relationship
-   Domino's white "SIGN IN" pill has with their blue bar. .on (used on the
-   tracking page itself, where this link points at the current page) is a
-   darker fill with a light ring, reading as "selected" against the still
-   fairly light default pill. */
-.nav-top-track{
-  text-decoration:none; color:var(--tinta2); background:#FFF3DE;
-  border-radius:999px; padding:7px 14px;
-  font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.02em;
-  transition:background-color .15s ease, color .15s ease;
-}
-.nav-top-track:hover{background:#fff; color:var(--rojo)}
-.nav-top-track.on{background:var(--rojo-osc); color:#FFF3DE; box-shadow:inset 0 0 0 1.5px #FFF3DE}
-.nav-top-track.on:hover{background:var(--rojo-osc); color:#FFF3DE}
+.nav-top-menu:hover, .nav-top-track:hover{color:#FFF3DE}
+.nav-top-menu.on, .nav-top-track.on{color:#FFF3DE; border-bottom-color:#FFF3DE}
 .nav-top-menu:focus-visible, .nav-top-track:focus-visible{outline:2px solid #FFF3DE; outline-offset:2px}
 .nav-in{
   display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;

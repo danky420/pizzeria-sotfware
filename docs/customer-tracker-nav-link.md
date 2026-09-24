@@ -49,12 +49,18 @@ the category-pill row it already contained:
 **The bar itself is a solid color** — the site's own red (`--rojo`), not
 Domino's blue — spanning the full viewport width, sitting above the
 still-cream category-pill row. The color change is the separator between
-the two; no border needed between them. "Rastrear pedido" renders as a
-light pill against that red bar (the same relationship Domino's white
-"SIGN IN" button has to their blue bar); on `TrackingPage`, where it points
-at the page you're already on, it gets an `.on` modifier — a darker fill
-with a light ring — as an active-state indicator, the same idea as an
-active category pill.
+the two; no border needed between them.
+
+**Menú and Rastrear pedido are plain text, not buttons.** Two earlier
+versions of this styling (a solid pill, then an outline pill) both got
+reported back as looking like a clickable button when the intent was just
+"which of these two applies to the page you're on" — a filled or outlined
+pill reads as "selected" the same way an active category pill does, which
+is misleading for a link that isn't a toggle. Settled on a plain
+underline instead: whichever one is the current page gets a solid
+underline and full-brightness text (`.on`); the other stays muted, no
+shape at all. "Menú" carries `.on` on the main site, "Rastrear pedido"
+carries it on `TrackingPage` — each page highlights the one you're on.
 
 **`TrackingPage` renders the same `.nav-top` row**, right below its own
 simplified header, so the primary nav persists across both pages exactly
@@ -89,8 +95,8 @@ No backend involved, so nothing in `backend/test`. Typechecked and built
 clean. Verified in a real browser: no horizontal overflow at 390px, 1200px,
 or 2000px; "Menú" scrolls smoothly back to the top from partway down the
 page on the main site and navigates to `/` on `TrackingPage`; "Rastrear
-pedido" navigates to `/rastreo` and renders in its active state once
-there; both pages render correctly in dark mode; and the computed styles
-for both nav-top links were checked directly (not just eyeballed from a
-screenshot) to confirm the specificity bug above was actually fixed, not
-just visually similar.
+pedido" navigates to `/rastreo`; each page shows the correct one
+underlined/highlighted and the other muted; both pages render correctly in
+dark mode; and the computed styles for both nav-top links were checked
+directly (not just eyeballed from a screenshot) to confirm the specificity
+bug above was actually fixed, not just visually similar.
