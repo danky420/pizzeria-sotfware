@@ -49,12 +49,13 @@ the category-pill row it already contained:
 **The bar itself is a solid color** — the site's own red (`--rojo`), not
 Domino's blue — spanning the full viewport width, sitting above the
 still-cream category-pill row. The color change is the separator between
-the two; no border needed between them. "Rastrear pedido" renders as a
-light pill against that red bar (the same relationship Domino's white
-"SIGN IN" button has to their blue bar); on `TrackingPage`, where it points
-at the page you're already on, it gets an `.on` modifier — a darker fill
-with a light ring — as an active-state indicator, the same idea as an
-active category pill.
+the two; no border needed between them. "Rastrear pedido" renders as an
+**outline** pill against that red bar by default — a solid fill was tried
+first and reported back as looking "always selected", since a filled pill
+is exactly what an active category pill below it means. The solid fill is
+reserved for the `.on` modifier, used only on `TrackingPage` itself, where
+it genuinely is the page you're on — the same idea as an active category
+pill, just not implied everywhere this link appears.
 
 **`TrackingPage` renders the same `.nav-top` row**, right below its own
 simplified header, so the primary nav persists across both pages exactly
