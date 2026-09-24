@@ -37,17 +37,44 @@ than copy it wholesale:
 A new row, `.nav-top`, inside the existing sticky `<nav>` (`App.tsx`), above
 the category-pill row it already contained:
 
-- **"Menú"** — a `<button>`, not a link (nothing to navigate to), that
-  smooth-scrolls to the top of the page.
+- **"Menú"** — on the main site, a `<button>` (nothing to navigate to)
+  that smooth-scrolls to the top of the page. On `TrackingPage` (see
+  below), it's a real `<a href="/">` back to the ordering site, since
+  there's no scroll target on that standalone page.
 - **"Rastrear pedido"** — a plain `<a href="/rastreo">`. `main.tsx` already
   routes that path to `TrackingPage` via a plain pathname check (no
   react-router in this app), so this needed no routing changes at all —
   it's a link to a page that was already fully built.
 
-Styled as a pill button matching the category buttons' look
-(`box-shadow` inset border, `border-radius: 999px`) — deliberately written
-as its own rule (`.nav-top-track`) rather than left to inherit that
-appearance by coincidence of both being an `<a>` somewhere inside `.nav`.
+**The bar itself is a solid color** — the site's own red (`--rojo`), not
+Domino's blue — spanning the full viewport width, sitting above the
+still-cream category-pill row. The color change is the separator between
+the two; no border needed between them. "Rastrear pedido" renders as a
+light pill against that red bar (the same relationship Domino's white
+"SIGN IN" button has to their blue bar); on `TrackingPage`, where it points
+at the page you're already on, it gets an `.on` modifier — a darker fill
+with a light ring — as an active-state indicator, the same idea as an
+active category pill.
+
+**`TrackingPage` renders the same `.nav-top` row**, right below its own
+simplified header, so the primary nav persists across both pages exactly
+like Domino's own tracker page keeps its top nav — matching the second
+reference screenshot the request was built against.
+
+## A real bug found and fixed along the way
+
+`.nav-in`'s category-pill styling was written as `.nav a` / `.nav a.on` —
+"any anchor inside `.nav`", not "any anchor inside `.nav-in`". That was a
+latent trap from the moment `.nav-top` was added (an earlier version of
+this same change already had to route around it once, for `.nav-top-track`
+alone), and it triggered for real once "Menú" became an actual `<a>` on
+`TrackingPage`: both it and the category pills are `<a>` tags somewhere
+inside the same `<nav>`, and `.nav a.on`'s higher specificity than the
+purpose-built `.nav-top-track.on` won the cascade, making "Rastrear
+pedido" render with the wrong red shade and no ring, and "Menú" pick up
+a cream pill it was never meant to have. Fixed at the root this time:
+rescoped both selectors to `.nav-in a` / `.nav-in a.on`, which is what
+they always should have been.
 
 ## What this does not do
 
@@ -59,7 +86,11 @@ appearance by coincidence of both being an `<a>` somewhere inside `.nav`.
 ## Verification
 
 No backend involved, so nothing in `backend/test`. Typechecked and built
-clean. Verified in a real browser: no horizontal overflow at 1200px or
-390px, "Menú" scrolls smoothly back to the top from partway down the page,
-"Rastrear pedido" navigates to `/rastreo`, and both render correctly in
-dark mode.
+clean. Verified in a real browser: no horizontal overflow at 390px, 1200px,
+or 2000px; "Menú" scrolls smoothly back to the top from partway down the
+page on the main site and navigates to `/` on `TrackingPage`; "Rastrear
+pedido" navigates to `/rastreo` and renders in its active state once
+there; both pages render correctly in dark mode; and the computed styles
+for both nav-top links were checked directly (not just eyeballed from a
+screenshot) to confirm the specificity bug above was actually fixed, not
+just visually similar.
