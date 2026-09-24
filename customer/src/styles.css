@@ -156,7 +156,7 @@ img{max-width:100%; display:block}
   border-bottom:1px solid var(--linea); padding:10px 0;
 }
 .nav-top{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  display:flex; align-items:center; justify-content:center; gap:20px;
   max-width:var(--ancho); margin:0 auto; padding:0 20px 10px;
   border-bottom:1px solid var(--linea); margin-bottom:10px;
 }
