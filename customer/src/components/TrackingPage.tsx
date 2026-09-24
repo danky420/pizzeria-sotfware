@@ -140,6 +140,17 @@ export function TrackingPage(): JSX.Element {
         </div>
       </header>
 
+      <nav className="nav" aria-label="Navegación principal">
+        <div className="nav-top">
+          <a className="nav-top-menu" href="/">
+            Menú
+          </a>
+          <a className="nav-top-track on" href="/rastreo">
+            Rastrear pedido
+          </a>
+        </div>
+      </nav>
+
       <main className="w rastreo-main">
         <h1 className="rastreo-tit">Rastrea tu pedido</h1>
 
