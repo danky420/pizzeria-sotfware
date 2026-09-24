@@ -90,6 +90,22 @@ export function App(): JSX.Element {
     return () => control.abort();
   }, [intento]);
 
+  // The initial fetch above only runs once per `intento`, so a tab left open
+  // across an admin hours change would otherwise show a stale "Cerrado"/
+  // "Abierto" forever -- `tick` already fires every 60s for the status-text
+  // recompute below, so piggyback a real refetch on it instead of only
+  // recomputing from the same stale `hours` object. Silently ignored on
+  // failure: a missed background refresh shouldn't blank out a status that
+  // was already showing correctly.
+  useEffect(() => {
+    if (tick === 0) return;
+    const control = new AbortController();
+    fetchHours(control.signal)
+      .then(setHours)
+      .catch(() => undefined);
+    return () => control.abort();
+  }, [tick]);
+
   const location = menu?.location ?? null;
   const brandName = location?.name ?? cachedBranding?.name ?? DEFAULT_NAME;
   const logoUrl = location?.logoUrl ?? cachedBranding?.logoUrl ?? null;
