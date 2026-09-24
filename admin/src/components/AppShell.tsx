@@ -6,11 +6,15 @@ import { ROLE_LABELS } from "../lib/roles";
 
 // Only back-office roles reach this shell, so there is one nav. Staff get the
 // orders queue in the employee app instead.
+//
+// Promociones isn't in this list: the feature isn't in use right now, so
+// there's no reason to surface it in the nav. The route, page, and backend
+// are untouched -- this is a nav-visibility decision, not a removal. Add it
+// back here (probably right after Menú) when it's actually needed again.
 const NAV = [
   { to: "/", label: "Resumen", end: true },
   { to: "/orders", label: "Pedidos", end: false },
   { to: "/menu", label: "Menú", end: false },
-  { to: "/promotions", label: "Promociones", end: false },
   { to: "/customers", label: "Clientes", end: false },
   { to: "/settings/hours", label: "Horarios", end: false },
   { to: "/settings/users", label: "Usuarios", end: false },
