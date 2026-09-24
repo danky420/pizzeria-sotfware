@@ -269,6 +269,18 @@ export function App(): JSX.Element {
       ) : null}
 
       <nav className="nav" aria-label="Secciones del menú">
+        <div className="nav-top">
+          <button
+            type="button"
+            className="nav-top-menu"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          >
+            Menú
+          </button>
+          <a className="nav-top-track" href="/rastreo">
+            Rastrear pedido
+          </a>
+        </div>
         <div className="nav-in" ref={navRef}>
           {sections.map((section) => (
             <a
