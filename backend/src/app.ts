@@ -12,6 +12,7 @@ import adminAnalyticsRoutes from "./routes/admin/analytics.js";
 import adminAuthRoutes from "./routes/admin/auth.js";
 import adminCustomerRoutes from "./routes/admin/customers.js";
 import adminHoursRoutes from "./routes/admin/hours.js";
+import itemAvailabilityRoutes from "./routes/admin/item-availability.js";
 import adminLocationRoutes from "./routes/admin/locations.js";
 import adminMenuRoutes from "./routes/admin/menu.js";
 import adminOrderRoutes from "./routes/admin/orders.js";
@@ -72,6 +73,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(adminUserRoutes, { prefix: ADMIN_PREFIX });
   await app.register(adminHoursRoutes, { prefix: ADMIN_PREFIX });
   await app.register(adminMenuRoutes, { prefix: ADMIN_PREFIX });
+  await app.register(itemAvailabilityRoutes, { prefix: ADMIN_PREFIX });
   await app.register(adminPromotionRoutes, { prefix: ADMIN_PREFIX });
   await app.register(adminOrderRoutes, { prefix: ADMIN_PREFIX });
   await app.register(adminCustomerRoutes, { prefix: ADMIN_PREFIX });

@@ -11,13 +11,14 @@ import {
   type MenuCategory,
   PageHeader,
   Panel,
+  Toggle,
   type ItemType,
   type MenuItem,
   type OptionGroup,
   type SizeOption,
   type StyleOption
 } from "@chesare/portal-shared";
-import { SuccessNotice, Toggle } from "../../components/ui";
+import { SuccessNotice } from "../../components/ui";
 import { formatMoney, slugify } from "../../lib/format";
 import { useActiveLocation } from "../../state/location";
 

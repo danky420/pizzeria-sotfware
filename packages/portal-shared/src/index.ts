@@ -32,6 +32,7 @@ export {
   type OrderListPage,
   type OrderStatusResult
 } from "./api/orders";
+export { menuAvailabilityApi } from "./api/menu-availability";
 
 // Auth state
 export { AuthProvider, ME_QUERY_KEY, useAuth, useSessionUser } from "./auth/context";
@@ -51,7 +52,7 @@ export { OrdersQueuePage } from "./orders/OrdersQueuePage";
 export { OrderDetailPage } from "./orders/OrderDetailPage";
 
 // UI primitives
-export { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel } from "./ui/index";
+export { Badge, EmptyState, ErrorNotice, Field, Loading, PageHeader, Panel, Toggle } from "./ui/index";
 
 // Display formatting
 export { formatDate, formatDateTime, formatMoney, formatNumber } from "./format";

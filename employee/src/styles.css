@@ -185,6 +185,37 @@ dl {
   letter-spacing: 0.01em;
 }
 
+.shell-nav {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.nav-link {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.nav-link-active {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+
+.nav-link-active:hover {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+
 .shell-user {
   display: flex;
   align-items: center;
@@ -297,6 +328,19 @@ dl {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.toggle input {
+  width: auto;
 }
 
 .toolbar {

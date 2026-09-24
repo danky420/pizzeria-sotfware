@@ -1,12 +1,10 @@
 import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { EmptyState, useAuth } from "@chesare/portal-shared";
 
 /**
- * There is one section in this app, so there is no nav — just who is signed in
- * and the way out, matching `admin/`'s header for the same account (no branch
- * name printed there either; a single-location account naming its own branch
- * next to "Chesa're" is just the brand name twice).
+ * Two sections now (queue, availability), so a small nav earns its place --
+ * still nothing like admin/'s, since there's only ever these two links.
  *
  * The branch itself still comes straight from the session: `GET /auth/me`
  * returns the location every non-SUPER_ADMIN account is pinned to, and the API
@@ -32,6 +30,15 @@ export function AppShell() {
           ) : null}
           <span className="brand-word">{location?.name ?? ""}</span>
         </div>
+
+        <nav className="shell-nav">
+          <NavLink to="/orders" className={({ isActive }) => (isActive ? "nav-link nav-link-active" : "nav-link")}>
+            Pedidos
+          </NavLink>
+          <NavLink to="/menu" className={({ isActive }) => (isActive ? "nav-link nav-link-active" : "nav-link")}>
+            Menú
+          </NavLink>
+        </nav>
 
         <div className="shell-user">
           <span className="shell-user-name">{user?.name}</span>

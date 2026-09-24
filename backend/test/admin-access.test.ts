@@ -69,14 +69,24 @@ describe.skipIf(!databaseReady)("admin route permissions", () => {
       }
     });
 
-    it("keeps STAFF out of menu writes", async () => {
+    it("keeps STAFF out of menu writes other than availability", async () => {
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/api/admin/menu/items/${fixture.refrescoId}/price`,
+        headers: { cookie: staffA },
+        payload: { flatPrice: 999 }
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it("lets STAFF mark an item unavailable -- the one menu write it does get", async () => {
       const response = await app.inject({
         method: "PATCH",
         url: `/api/admin/menu/items/${fixture.refrescoId}/availability`,
         headers: { cookie: staffA },
         payload: { available: false }
       });
-      expect(response.statusCode).toBe(403);
+      expect(response.statusCode).toBe(200);
     });
 
     it("still allows STAFF to read their own account and log out", async () => {
