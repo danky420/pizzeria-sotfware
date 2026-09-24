@@ -32,7 +32,6 @@ import {
   createSizeOptionBody,
   createStyleOptionBody,
   idParams,
-  patchItemAvailabilityBody,
   patchItemPriceBody,
   putPriceMatrixBody,
   reorderCategoriesBody,
@@ -57,7 +56,7 @@ function toJson(value: string[] | null | undefined) {
   return value === null ? Prisma.DbNull : value;
 }
 
-const itemInclude = {
+export const itemInclude = {
   priceCells: true,
   optionGroups: { orderBy: { sortOrder: "asc" }, include: { choices: { orderBy: { sortOrder: "asc" } } } }
 } satisfies Prisma.MenuItemInclude;
@@ -382,17 +381,9 @@ export default async function adminMenuRoutes(app: FastifyInstance): Promise<voi
     return { item: presentItem(item) };
   });
 
-  app.patch("/menu/items/:id/availability", async (request) => {
-    const { id } = idParams.parse(request.params);
-    const body = patchItemAvailabilityBody.parse(request.body);
-    await loadItem(request, id);
-    const item = await prisma.menuItem.update({
-      where: { id },
-      data: { available: body.available },
-      include: itemInclude
-    });
-    return { item: presentItem(item) };
-  });
+  // PATCH /menu/items/:id/availability moved to item-availability.ts -- it's
+  // the one menu write STAFF also needs (marking something out of stock),
+  // everything else on this file stays BACK_OFFICE_ROLES only.
 
   app.put("/menu/items/:id/price-matrix", async (request) => {
     const { id } = idParams.parse(request.params);

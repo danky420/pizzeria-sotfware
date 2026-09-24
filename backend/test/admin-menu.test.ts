@@ -8,12 +8,16 @@ describe.skipIf(!databaseReady)("admin menu management", () => {
   let app: FastifyInstance;
   let fixture: Fixture;
   let ownerA: string;
+  let staffA: string;
+  let ownerB: string;
 
   beforeAll(async () => {
     await resetDatabase();
     fixture = await seedFixture();
     app = await buildApp();
     ownerA = await login(app, "owner@a.test");
+    staffA = await login(app, "staff@a.test");
+    ownerB = await login(app, "owner@b.test");
   });
 
   afterAll(async () => {
@@ -210,6 +214,63 @@ describe.skipIf(!databaseReady)("admin menu management", () => {
         payload: { categoryIds: categories.map((category) => category.id) }
       });
       expect(response.statusCode).toBe(403);
+    });
+  });
+
+  describe("STAFF item availability", () => {
+    it("lets STAFF mark an item unavailable and back available again", async () => {
+      const off = await app.inject({
+        method: "PATCH",
+        url: `/api/admin/menu/items/${fixture.pizzaId}/availability`,
+        headers: { cookie: staffA },
+        payload: { available: false }
+      });
+      expect(off.statusCode).toBe(200);
+      expect(off.json().item.available).toBe(false);
+
+      const on = await app.inject({
+        method: "PATCH",
+        url: `/api/admin/menu/items/${fixture.pizzaId}/availability`,
+        headers: { cookie: staffA },
+        payload: { available: true }
+      });
+      expect(on.statusCode).toBe(200);
+      expect(on.json().item.available).toBe(true);
+    });
+
+    it("lists the menu for STAFF including items that are currently unavailable", async () => {
+      // refrescoId was set to unavailable earlier in this file and never
+      // flipped back -- exactly the case this listing needs to still show.
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/admin/locations/${fixture.locationA.id}/menu/availability`,
+        headers: { cookie: staffA }
+      });
+      expect(response.statusCode).toBe(200);
+
+      const bebidas = response
+        .json()
+        .categories.find((category: { slug: string }) => category.slug === "bebidas");
+      const refresco = bebidas.items.find((item: { slug: string }) => item.slug === "refresco");
+      expect(refresco).toBeDefined();
+      expect(refresco.available).toBe(false);
+    });
+
+    it("refuses another location's session, same as every other menu route", async () => {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/admin/locations/${fixture.locationA.id}/menu/availability`,
+        headers: { cookie: ownerB }
+      });
+      expect(response.statusCode).toBe(403);
+
+      const patch = await app.inject({
+        method: "PATCH",
+        url: `/api/admin/menu/items/${fixture.pizzaId}/availability`,
+        headers: { cookie: ownerB },
+        payload: { available: false }
+      });
+      expect(patch.statusCode).toBe(403);
     });
   });
 });

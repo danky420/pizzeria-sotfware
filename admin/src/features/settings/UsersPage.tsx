@@ -10,11 +10,12 @@ import {
   Loading,
   PageHeader,
   Panel,
+  Toggle,
   useSessionUser,
   type AdminRole,
   type AdminUser
 } from "@chesare/portal-shared";
-import { SuccessNotice, Toggle } from "../../components/ui";
+import { SuccessNotice } from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { ROLE_LABELS } from "../../lib/roles";
 import { useLocationId } from "../../state/location";

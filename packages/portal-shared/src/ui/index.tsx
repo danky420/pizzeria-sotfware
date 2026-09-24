@@ -134,3 +134,27 @@ export function Field({
 export function Badge({ tone, children }: { tone?: "ok" | "warn" | "muted" | "info"; children: ReactNode }) {
   return <span className={`badge badge-${tone ?? "muted"}`}>{children}</span>;
 }
+
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="toggle">
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
