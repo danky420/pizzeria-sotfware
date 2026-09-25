@@ -222,6 +222,93 @@ same way `docs/multi-tenant-branding-plan.md` scoped itself to branding only.
    sandbox run of approved, rejected, and expired-abandoned payments has
    been exercised end to end.
 
+## Costs
+
+Numbers below are Mercado Pago México's own published Checkout Pro / online-
+collection rates, as looked up on **2026-09-24** from mercadopago.com.mx's
+public pricing/help pages (the checkout product page and the "costos y
+comisiones" help article), cross-checked against several third-party
+fee-comparison sites. Several of Mercado Pago's own pages returned a 403 when
+fetched directly during this research (likely bot-blocking) and had to be
+read via search-engine-indexed copies instead, and real-time pricing is only
+shown in full once logged into a KYC'd business account. **Treat everything
+here as a starting estimate to re-verify against the live dashboard
+(mercadopago.com.mx → Tu negocio → Comisiones) at implementation time, not as
+a locked-in number** — processor fees change, and this doc will age.
+
+- **Card payments (credit and debit) and SPEI bank transfer share one fee
+  schedule, tiered by settlement speed, not by card brand or card type**:
+  - Immediate ("al instante"): 3.49% + $4.00 MXN + IVA per approved
+    transaction.
+  - A mid-tier: 3.19% + $4.00 MXN + IVA. Sources disagree on whether this
+    tier settles in 7 or 14 days — worth pinning down exactly in the
+    dashboard, since it affects the payout-timing question below.
+  - 30-day settlement: 2.95% + $4.00 MXN + IVA — the cheapest option, but
+    still not free.
+  - No source found (official or third-party) shows a different rate for
+    Visa/Mastercard vs. American Express, or for credit vs. debit, under this
+    schedule. One third-party comparison site quoted a differentiated
+    3.99% (credit) / 3.29% (debit) structure that conflicts with Mercado
+    Pago's own help-page numbers above — that conflict is unresolved; treat
+    the differentiated figure as unconfirmed.
+- **OXXO (cash voucher)**: 3.79% + $4.00 MXN + IVA, settling 3 business days
+  after the customer actually pays at the store. Meaningfully more expensive
+  than card/SPEI, and slower — relevant here because an OXXO-paid order can't
+  be confirmed at order time the way a card payment can; the customer pays
+  later, in person, at a different location.
+- **Meses sin intereses (installments)**: available and merchant-configured
+  (3/6/9/12/18/24 months), with the merchant absorbing an extra financing
+  commission on top of the base rate above so the buyer pays the same total.
+  The exact per-tier percentage isn't published on the pages found — it's set
+  when a business enables MSI in its dashboard. Given this is a pizzeria
+  checkout with a low ticket size, MSI is likely not worth enabling at all,
+  so this gap doesn't block anything here.
+- **No monthly fee, no setup fee, no minimum-volume requirement** — every
+  source, including Mercado Pago's own pages, confirms pay-per-approved-
+  transaction only ("Solo cobramos por ventas aprobadas, y no hay costos
+  fijos").
+- **Payout timing is not "free default + paid instant option"** the way some
+  processors frame it. In Mexico, Mercado Pago prices the transaction fee
+  itself by settlement speed (the three tiers above) — there's no genuinely
+  free tier, and no separate "instant transfer" surcharge stacked on top of a
+  lower base rate. The settlement-speed choice *is* the fee choice.
+- **Chargebacks/disputes**: Mercado Pago's developer docs describe the
+  dispute-handling process (webhook/IPN notification, evidence submission)
+  but no source found states a flat chargeback fee in pesos for Mexico.
+  Assume one exists — it's near-universal among card processors — but don't
+  put a number on it without confirming from the dashboard or Mercado Pago
+  support first.
+- **Tax withholding — the murkiest area, worth flagging clearly.** Mexican
+  SAT rules require "plataformas tecnológicas" (Mercado Libre's own
+  marketplace, Uber, Airbnb, Amazon, etc.) to withhold ISR (roughly a
+  1%–2.9% sliding scale with a valid RFC on file, or 20% ISR + 16% IVA
+  without one) on sales the platform itself intermediates. That regime is
+  well documented, but it's documented for **Mercado Libre marketplace
+  sellers** — this research found no clear, unambiguous statement of whether
+  the same withholding applies when **Mercado Pago is used only as a payment
+  processor behind an independent website's own checkout** (this project's
+  actual use case), as opposed to a marketplace-facilitated sale. This has
+  real bookkeeping consequences (it changes what nets to the shop's bank
+  account per order and what shows up pre-withheld on the Mercado Pago
+  statement) and should be confirmed with the shop's accountant or Mercado
+  Pago support before go-live rather than assumed either way.
+- **KYC/verification tier**: no source found shows a different percentage fee
+  for a verified vs. unverified Mercado Pago business account. What
+  incomplete verification does affect, per Mercado Pago's general model, is
+  whether funds can be withdrawn at all and how much can be held pending
+  KYC — consistent with this plan already treating full business
+  verification as a go-live prerequisite (see "Rollout phasing," step 5),
+  not just a formality.
+
+This bears on two of the open questions below: the settlement-speed tiers
+mean money can reach the shop's bank account up to 30 days after a payment is
+`APPROVED`, depending on which payout speed the account is configured for —
+which supports counting revenue at `PAID` (an approved payment is real
+revenue immediately; what's delayed is the bank *payout*, not
+`Payment.status`). It has no real bearing on the 30-minute preference-expiry
+question, which is about how long an unpaid checkout session stays open, not
+settlement speed.
+
 ## Open questions for the user
 
 - **Analytics**: should an `ONLINE` order's revenue count in admin analytics
